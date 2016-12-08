@@ -24,7 +24,7 @@ sudo apt-get install unixodbc tdsodbc:amd64 odbcinst1debian2:amd64 odbcinst libs
 ```console
 sudo dpkg -i ems-bus_1.0.7-Ubuntu-yakkety_amd64
 ```
-
+*Note: install the deb version according to the version of the Linux distribution.*
 
 
 Running ems-bus
