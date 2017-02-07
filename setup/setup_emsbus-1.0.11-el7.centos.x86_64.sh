@@ -5,12 +5,6 @@
 #
 # Goal: Instalador para Linux CentOS x64
 #
-# Modo de usar: 
-#
-#    $ ./setup_centos.sh
-#
-#
-#
 #
 #
 ## Histórico de modificações do software:
@@ -18,8 +12,6 @@
 # Data       |  Quem           |  Mensagem  
 # -----------------------------------------------------------------------------------------------------
 # 28/11/2016  Everton Agilar     Release inicial do script de release
-#
-#
 #
 #
 #
