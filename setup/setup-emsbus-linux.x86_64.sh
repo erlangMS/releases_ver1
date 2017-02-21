@@ -241,6 +241,8 @@ if [ "$LINUX_DISTRO" == "centos" ]; then
 		fi
 	fi
 	
+	sudo systemctl daemon-reload
+	
 	
 
 elif [ "$LINUX_DISTRO" == "debian" ]; then
