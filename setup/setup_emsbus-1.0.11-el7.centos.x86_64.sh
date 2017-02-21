@@ -19,18 +19,31 @@
 #
 ########################################################################################################
 
+echo "Starting the ERLANGMS installation on $LINUX_DESCRIPTION"
+echo "Preparing for installation, please wait..."
 
 # ***** Parameters to script *****
-#LINUX_DESCRIPTION=$(lsb_release -d 2> /dev/null | sed -rn 's/Description:\t(.*$)/\1/p')
-VERSION_SETUP="ems-bus-1.0.11-el7.centos.x86_64"
+
+REPO_RELEASE_URL="https://github.com/erlangMS/releases/raw/master"
+
+
+# Get the last release version of the ems-bus
+RELEASE_VERSION=$(curl $REPO_RELEASE_URL/setup/current_version 2> /dev/null)
+echo $RELEASE_VERSION
+if [ -z "$RELEASE_VERSION" ]; then
+	echo "Could not download the latest version of the ems-bus. Check your connection!!!"
+	exit 1
+fi
+
+SETUP_VERSION="$RELEASE_VERSION-el7.centos.x86_64"
+SETUP_FILE="$SETUP_VERSION.rpm"
 LINUX_DESCRIPTION=$(cat /etc/redhat-release 2> /dev/null)
 YUM_UPDATE_NECESSARY="false"
 CURRENT_DIR=$(pwd)
-TMP_DIR="/tmp/setup_$VERSION_SETUP_$$/"
-
+TMP_DIR="/tmp/erlangms/setup_$SETUP_VERSION_$$/"
 
 # Enables installation logging
-LOG_FILE="setup_""$VERSION_SETUP""_$(date '+%d%m%Y_%H%M%S').log"
+LOG_FILE="setup_""$SETUP_VERSION""_$(date '+%d%m%Y_%H%M%S').log"
 exec > >(tee -a ${LOG_FILE} )
 exec 2> >(tee -a ${LOG_FILE} >&2)
 
@@ -39,13 +52,12 @@ exec 2> >(tee -a ${LOG_FILE} >&2)
 mkdir -p $TMP_DIR && cd $TMP_DIR
 
 
-echo "Starting the ERLANGMS installation on $LINUX_DESCRIPTION"
 echo "Purpose: A service-oriented bus developed in Erlang/OTP by Everton de Vargas Agilar"
-echo "Version: $VERSION_SETUP"
+echo "Version: $SETUP_VERSION"
 echo "Log file: $LOG_FILE" 
 echo "Date: $(date '+%d/%m/%Y %H:%M:%S')"
 echo "============================================================================="
-
+exit
 
 # ***** EPEL 7 repository **********
 echo "Installing the latest EPEL 7 repository..."
@@ -173,14 +185,15 @@ fi
 
 # ***** Install ems-bus *****
 if ! rpm -qi ems-bus >> /dev/null ; then
-	echo "Downloading ems-bus-1.0.11-el7.centos.x86_64.rpm..."
-	wget -nv https://github.com/erlangMS/releases/raw/master/ems-bus_1.0.11/ems-bus-1.0.11-el7.centos.x86_64.rpm
-	echo "Installing ems-bus-1.0.11-el7.centos.x86_64.rpm..."
-	sudo rpm -Uhv ems-bus-1.0.11-el7.centos.x86_64.rpm
+	echo "Downloading $SETUP_FILE..."
+	wget -nv $REPO_RELEASE_URL/$SETUP_FILE
+	echo "Installing $SETUP_FILE..."
+	sudo rpm -Uhv $SETUP_FILE
 else
-	echo "Skipping ems-bus-1.0.11-el7.centos.x86_64.rpm installation because it is already installed."
+	echo "Skipping $SETUP_FILE installation because it is already installed."
 fi
 
 
 cd $CURRENT_DIR
+rm -rf $TMP_DIR
 echo "Ok!!!"
