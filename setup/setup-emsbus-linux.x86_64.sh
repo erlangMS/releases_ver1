@@ -227,14 +227,18 @@ if [ "$LINUX_DISTRO" == "centos" ]; then
 	 
 
 
-	# ***** Install ems-bus *****
+	# ***** Install or update ems-bus *****
 	if ! rpm -qi ems-bus >> /dev/null ; then
 		echo "Installing $SETUP_PACKAGE..."
 		sudo rpm -ihv $SETUP_FILE
 	else
+		sudo systemctl stop ems-bus > /dev/null 2>&1
 		RPM_VERSION_INSTALLED=$(rpm -qi ems-bus | grep Version | cut -d: -f2)
-		echo "A version of the $RPM_VERSION_INSTALLED ems-bus is already installed, updating to $SETUP_VERSION..."
-		sudo rpm -Uhv $SETUP_FILE
+		echo "Removing previously installed$RPM_VERSION_INSTALLED version."
+		if sudo rpm -e ems-bus ; then
+			echo "Installing $SETUP_PACKAGE..."
+			sudo rpm -ihv $SETUP_FILE
+		fi
 	fi
 	
 	
