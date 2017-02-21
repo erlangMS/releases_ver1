@@ -58,11 +58,11 @@ echo "Preparing for installation, please wait..."
 
 
 # Github repository ERLANGMS release
-REPO_RELEASE_URL="https://raw.githubusercontent.com/erlangMS/releases/master"
-
+REPO_RELEASE_URL="https://github.com/erlangms/releases/raw/master"
+				  
 
 # Get the last release version of the ems-bus
-RELEASE_VERSION=$(curl $REPO_RELEASE_URL/setup/current_version 2> /dev/null)
+RELEASE_VERSION=$(curl https://raw.githubusercontent.com/erlangms/releases/master/setup/current_version 2> /dev/null)
 if [ -z "$RELEASE_VERSION" ]; then
 	echo "Could not download the latest version of the ems-bus. Check your connection!!!"
 	exit 1
@@ -71,7 +71,7 @@ fi
 
 # Define $SETUP_VERSION, SETUP_PACKAGE and $SETUP_FILE
 if [[ "$LINUX_DISTRO" =~ (centos|debian|ubuntu) ]]; then
-	SETUP_VERSION="ems-bus_$RELEASE_VERSION-$LINUX_DISTRO.$LINUX_VERSION_ID.x86_64"
+	SETUP_VERSION="ems-bus-$RELEASE_VERSION.$LINUX_DISTRO.$LINUX_VERSION_ID.x86_64"
 	if [ "$LINUX_DISTRO" == "centos" ]; then
 		SETUP_PACKAGE="$SETUP_VERSION.rpm"
 	else
@@ -86,17 +86,11 @@ fi
 
 # Download the ems-bus package according to the distribution
 echo "Downloading $SETUP_FILE..."
-wget -nv $SETUP_FILE 2> /dev/null 
-if [ ! -z $? ]; then
+wget -nvc $SETUP_FILE  2> /dev/null
+if [ ! $? -eq 0 ]; then
 	echo "The ems-bus package $SETUP_PACKAGE could not be downloaded. Canceling the installation."
 	exit 1
 fi
-
-
-exit
-
-
-
 
 
 
@@ -108,10 +102,6 @@ echo "==========================================================================
 
 
 if [ "$LINUX_DISTRO" == "centos" ]; then
-	echo "centos"
-	exit 1
-
-
 
 	# ***** EPEL 7 repository **********
 	echo "Installing the latest EPEL 7 repository..."
@@ -238,18 +228,14 @@ if [ "$LINUX_DISTRO" == "centos" ]; then
 
 
 	# ***** Install ems-bus *****
-	if ! rpm -qi ems-bus >> /dev/null ; then
-		echo "Installing $SETUP_FILE..."
-		sudo rpm -Uhv $SETUP_FILE
-	else
-		echo "Skipping $SETUP_FILE installation because it is already installed."
-	fi
+	echo "Installing $SETUP_PACKAGE..."
+	sudo rpm -Uhv $SETUP_FILE
 
 elif [ "$LINUX_DISTRO" == "debian" ]; then
-	echo "debian"
+	echo "todo debian"
 
 elif [ "$LINUX_DISTRO" == "ubuntu" ]; then
-	echo "ubutu"
+	echo "todo ubuntu"
 fi	
 
 cd $CURRENT_DIR
