@@ -71,7 +71,7 @@ fi
 
 # Define $SETUP_VERSION, SETUP_PACKAGE and $SETUP_FILE
 if [[ "$LINUX_DISTRO" =~ (centos|debian|ubuntu) ]]; then
-	SETUP_VERSION="ems-bus-$RELEASE_VERSION.$LINUX_DISTRO.$LINUX_VERSION_ID.x86_64"
+	SETUP_VERSION="ems-bus-$RELEASE_VERSION-$LINUX_DISTRO.$LINUX_VERSION_ID.x86_64"
 	if [ "$LINUX_DISTRO" == "centos" ]; then
 		SETUP_PACKAGE="$SETUP_VERSION.rpm"
 	else
@@ -228,8 +228,16 @@ if [ "$LINUX_DISTRO" == "centos" ]; then
 
 
 	# ***** Install ems-bus *****
-	echo "Installing $SETUP_PACKAGE..."
-	sudo rpm -Uhv $SETUP_FILE
+	if ! rpm -qi ems-bus >> /dev/null ; then
+		echo "Installing $SETUP_PACKAGE..."
+		sudo rpm -ihv $SETUP_FILE
+	else
+		RPM_VERSION_INSTALLED=$(rpm -qi ems-bus | grep Version | cut -d: -f2)
+		echo "A version of the $RPM_VERSION_INSTALLED ems-bus is already installed, updating to $SETUP_VERSION..."
+		sudo rpm -Uhv $SETUP_FILE
+	fi
+	
+	
 
 elif [ "$LINUX_DISTRO" == "debian" ]; then
 	echo "todo debian"
