@@ -104,8 +104,8 @@ echo "==========================================================================
 if [ "$LINUX_DISTRO" == "centos" ]; then
 
 	# ***** EPEL 7 repository **********
-	echo "Installing the latest EPEL 7 repository..."
 	if ! rpm -qi epel-release  >> /dev/null ; then
+		echo "Installing the latest EPEL 7 repository..."
 		sudo yum -y install epel-release
 		UPDATE_NECESSARY="true"
 	else
