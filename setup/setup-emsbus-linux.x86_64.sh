@@ -159,7 +159,7 @@ install(){
 
 		# erlang-solutions is a rpm package for Erlang repository
 		if ! rpm -qi erlang-solutions >> /dev/null ; then
-			echo "Adding Erlang repository entry"
+			echo "Adding Erlang repository entry."
 			wget -nv https://packages.erlang-solutions.com/erlang-solutions-1.0-1.noarch.rpm
 
 			# Check internet connectivity
@@ -287,11 +287,107 @@ install(){
 		
 		
 
-	elif [ "$LINUX_DISTRO" == "debian" ]; then
-		echo "todo debian"
-
 	elif [ "$LINUX_DISTRO" == "ubuntu" ]; then
-		echo "todo ubuntu"
+		# ***** Erlang Runtime Library **********
+
+		# erlang-solutions is a rpm package for Erlang repository
+		if ! dpkg -s erlang-solutions > /dev/null ; then
+			echo "Adding Erlang repository entry."
+			wget -nv https://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb
+
+			# Check internet connectivity
+			if [ "$?" -eq "4" ]; then
+				echo "Make sure your DNS is well configured or if there is Internet on this host. Canceling installation..."
+				exit 1
+			fi
+
+			sudo dpkg -i erlang-solutions_1.0_all.deb
+			UPDATE_NECESSARY="true"
+		fi
+
+
+		# update yum if necessary
+		if [ "$UPDATE_NECESSARY" == "true" ]; then
+			echo "apt update..."
+			sudo apt-get -y update
+		fi
+
+
+		# Check if Erlang runtime already exist
+		if ! erl -version 2> /dev/null;  then
+			echo "Installing Erlang Runtime Library packages..."
+			sudo sudo apt-get install erlang
+		else
+			echo "Skipping Erlang Runtime Library installation because it is already installed."
+		fi
+
+
+		# **** Install required packages ****
+		
+		REQUIRED_PCK="unixodbc tdsodbc:amd64 odbcinst1debian2:amd64 odbcinst libsqliteodbc:amd64 libsqliteodbc libodbc1 libsqlite0 freetds-common ldap-utils"
+		INSTALL_REQUIRED_PCK="false"
+		for PCK in $REQUIRED_PCK; do 
+			if ! dpkg -s $PCK; then
+				INSTALL_REQUIRED_PCK="true"
+				break
+			fi
+		done
+		if [ "$INSTALL_REQUIRED_PCK" == "true" ]; then
+			echo "Installing required packages $REQUIRED_PCK..."
+			sudo apt-get -y install $REQUIRED_PCK
+		fi
+
+
+	elif [ "$LINUX_DISTRO" == "debian" ]; then
+
+		# ***** Erlang Runtime Library **********
+
+		# erlang-solutions is a rpm package for Erlang repository
+		if ! dpkg -s erlang-solutions > /dev/null ; then
+			echo "Adding Erlang repository entry."
+			wget -nv https://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb
+
+			# Check internet connectivity
+			if [ "$?" -eq "4" ]; then
+				echo "Make sure your DNS is well configured or if there is Internet on this host. Canceling installation..."
+				exit 1
+			fi
+
+			sudo dpkg -i erlang-solutions_1.0_all.deb
+			UPDATE_NECESSARY="true"
+		fi
+
+
+		# update yum if necessary
+		if [ "$UPDATE_NECESSARY" == "true" ]; then
+			echo "apt update..."
+			sudo apt-get -y update
+		fi
+
+		# Check if Erlang runtime already exist
+		if ! erl -version 2> /dev/null;  then
+			echo "Installing Erlang Runtime Library packages..."
+			sudo sudo apt-get install erlang
+		else
+			echo "Skipping Erlang Runtime Library installation because it is already installed."
+		fi
+
+
+		# **** Install required packages ****
+		
+		REQUIRED_PCK="unixodbc tdsodbc freetds-common odbcinst1debian2 odbcinst libcppdb-sqlite3-0 libodbc1 libiodbc2 libcppdb-odbc0 libltdl7 libcppdb0 ldap-utils"
+		INSTALL_REQUIRED_PCK="false"
+		for PCK in $REQUIRED_PCK; do 
+			if ! dpkg -s $PCK; then
+				INSTALL_REQUIRED_PCK="true"
+				break
+			fi
+		done
+		if [ "$INSTALL_REQUIRED_PCK" == "true" ]; then
+			echo "Installing required packages $REQUIRED_PCK..."
+			sudo apt-get -y install $REQUIRED_PCK
+		fi
+
 	fi	
 
 	if curl localhost:2301 > /dev/null 2>&1; then
