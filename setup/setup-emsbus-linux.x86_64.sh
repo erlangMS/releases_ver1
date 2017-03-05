@@ -265,27 +265,23 @@ install(){
 		else
 			echo "Skipping driver SQL-Server freetds installation because it is already installed."
 		fi
-		 
 
 
 		# ***** Install or update ems-bus *****
+		
 		if ! rpm -qi ems-bus >> /dev/null ; then
 			echo "Installing $SETUP_PACKAGE..."
 			sudo rpm -ihv $SETUP_FILE
 		else
 			sudo systemctl stop ems-bus > /dev/null 2>&1
-			RPM_VERSION_INSTALLED=$(rpm -qi ems-bus | grep Version | cut -d: -f2)
-			echo "Removing previously installed$RPM_VERSION_INSTALLED version."
+			VERSION_INSTALLED=$(rpm -qi ems-bus | grep Version | cut -d: -f2)
+			echo "Removing previously installed$VERSION_INSTALLED version."
 			if sudo rpm -e ems-bus ; then
 				echo "Installing $SETUP_PACKAGE..."
-				sudo rpm -ihv $SETUP_FILE
+				sudo rpm -ihv $SETUP_PACKAGE
 			fi
 		fi
-		
-		sudo systemctl daemon-reload
-		
-		
-		
+
 
 	elif [ "$LINUX_DISTRO" == "ubuntu" ]; then
 		# ***** Erlang Runtime Library **********
@@ -324,10 +320,10 @@ install(){
 
 		# **** Install required packages ****
 		
-		REQUIRED_PCK="unixodbc tdsodbc:amd64 odbcinst1debian2:amd64 odbcinst libsqliteodbc:amd64 libsqliteodbc libodbc1 libsqlite0 freetds-common ldap-utils"
+		REQUIRED_PCK="libiodbc2 unixodbc tdsodbc:amd64 odbcinst1debian2:amd64 odbcinst libsqliteodbc:amd64 libsqliteodbc libodbc1 libsqlite0 freetds-common ldap-utils"
 		INSTALL_REQUIRED_PCK="false"
 		for PCK in $REQUIRED_PCK; do 
-			if ! dpkg -s $PCK; then
+			if ! dpkg -s $PCK > /dev/null 2>&1 ; then
 				INSTALL_REQUIRED_PCK="true"
 				break
 			fi
@@ -337,6 +333,21 @@ install(){
 			sudo apt-get -y install $REQUIRED_PCK
 		fi
 
+
+		# ***** Install or update ems-bus *****
+		
+		if ! dpkg -s ems-bus > /dev/null 2>&1 ; then
+			echo "Installing $SETUP_PACKAGE..."
+			sudo dpkg -i $SETUP_PACKAGE
+		else
+			sudo systemctl stop ems-bus > /dev/null 2>&1
+			VERSION_INSTALLED=$(dpkg -s ems-bus | grep Version | cut -d: -f2)
+			echo "Removing previously installed$VERSION_INSTALLED version."
+			if sudo apt-get -y remove ems-bus ; then
+				echo "Installing $SETUP_PACKAGE..."
+				sudo dpkg -i $SETUP_PACKAGE
+			fi
+		fi
 
 	elif [ "$LINUX_DISTRO" == "debian" ]; then
 
@@ -378,7 +389,7 @@ install(){
 		REQUIRED_PCK="unixodbc tdsodbc freetds-common odbcinst1debian2 odbcinst libcppdb-sqlite3-0 libodbc1 libiodbc2 libcppdb-odbc0 libltdl7 libcppdb0 ldap-utils"
 		INSTALL_REQUIRED_PCK="false"
 		for PCK in $REQUIRED_PCK; do 
-			if ! dpkg -s $PCK; then
+			if ! dpkg -s $PCK > /dev/null 2>&1 ; then
 				INSTALL_REQUIRED_PCK="true"
 				break
 			fi
@@ -388,7 +399,26 @@ install(){
 			sudo apt-get -y install $REQUIRED_PCK
 		fi
 
+
+		# ***** Install or update ems-bus *****
+		
+		if ! dpkg -s ems-bus >> /dev/null ; then
+			echo "Installing $SETUP_PACKAGE..."
+			sudo dpkg -i $SETUP_PACKAGE
+		else
+			sudo systemctl stop ems-bus > /dev/null 2>&1
+			VERSION_INSTALLED=$(dpkg -s ems-bus | grep Version | cut -d: -f2)
+			echo "Removing previously installed$VERSION_INSTALLED version."
+			if sudo apt-get -y remove ems-bus ; then
+				echo "Installing $SETUP_PACKAGE..."
+				sudo dpkg -i $SETUP_PACKAGE
+			fi
+		fi
+
 	fi	
+
+
+	sudo systemctl daemon-reload
 
 	if curl localhost:2301 > /dev/null 2>&1; then
 		echo "Installation done successfully!!!"
