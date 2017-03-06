@@ -12,12 +12,49 @@
 # Data       |  Quem           |  Mensagem  
 # -----------------------------------------------------------------------------------------------------
 # 15/01/2017  Everton Agilar     Initial release
+# 05/03/2017  Everton Agilar     Make sure only root can run our script
 #
 #
 #
 #
 #
 ########################################################################################################
+
+# Make sure only root can run our script
+if [[ $EUID -ne 0 ]]; then
+   echo "This setup must be run as root" 1>&2
+   exit 1
+fi
+
+
+# Identify the linux distribution: ubuntu, debian, centos
+LINUX_DISTRO=$(awk -F"=" '{ if ($1 == "ID"){ 
+								gsub("\"", "", $2);  print $2 
+							} 
+						  }' /etc/os-release)
+
+# Get linux description
+LINUX_DESCRIPTION=$(awk -F"=" '{ if ($1 == "PRETTY_NAME"){ 
+									gsub("\"", "", $2);  print $2 
+								 } 
+							   }'  /etc/os-release)
+
+
+LINUX_VERSION_ID=$(awk -F"=" '{ if ($1 == "VERSION_ID"){ 
+									gsub("\"", "", $2);  print $2 
+								 } 
+							   }'  /etc/os-release)
+
+
+# Primary IP of the server
+LINUX_IP_SERVER=$(hostname -I | cut -d" " -f1)
+
+
+CURRENT_DIR=$(pwd)
+TMP_DIR="/tmp/erlangms/setup_$SETUP_VERSION_$$/"
+mkdir -p $TMP_DIR && cd $TMP_DIR
+LOG_FILE="setup_emsbus_""$SETUP_VERSION""_$(date '+%d%m%Y_%H%M%S').log"
+
 
 # SMTP parameter
 SMTP_SERVER="mail.unb.br"
@@ -57,34 +94,6 @@ except Exception as e:
 	exit(1)
 EOF
 }
-
-# Identify the linux distribution: ubuntu, debian, centos
-LINUX_DISTRO=$(awk -F"=" '{ if ($1 == "ID"){ 
-								gsub("\"", "", $2);  print $2 
-							} 
-						  }' /etc/os-release)
-
-# Get linux description
-LINUX_DESCRIPTION=$(awk -F"=" '{ if ($1 == "PRETTY_NAME"){ 
-									gsub("\"", "", $2);  print $2 
-								 } 
-							   }'  /etc/os-release)
-
-
-LINUX_VERSION_ID=$(awk -F"=" '{ if ($1 == "VERSION_ID"){ 
-									gsub("\"", "", $2);  print $2 
-								 } 
-							   }'  /etc/os-release)
-
-
-# Primary IP of the server
-LINUX_IP_SERVER=$(hostname -I | cut -d" " -f1)
-
-
-CURRENT_DIR=$(pwd)
-TMP_DIR="/tmp/erlangms/setup_$SETUP_VERSION_$$/"
-mkdir -p $TMP_DIR && cd $TMP_DIR
-LOG_FILE="setup_emsbus_""$SETUP_VERSION""_$(date '+%d%m%Y_%H%M%S').log"
 
 
 # Performs the installation of the ems-bus
