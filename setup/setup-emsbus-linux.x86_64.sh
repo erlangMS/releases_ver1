@@ -314,7 +314,7 @@ install(){
 
 
 		# update yum if necessary
-		if [ "$UPDATE_NECESSARY" == "true" ]; then
+		if [ "$UPDATE_NECESSARY" = "true" ]; then
 			echo "apt update..."
 			sudo apt-get -y update
 		fi
@@ -339,9 +339,11 @@ install(){
 				break
 			fi
 		done
-		if [ "$INSTALL_REQUIRED_PCK" == "true" ]; then
+		if [ "$INSTALL_REQUIRED_PCK" = "true" ]; then
 			echo "Installing required packages $REQUIRED_PCK..."
 			sudo apt-get -y install $REQUIRED_PCK
+		else
+			echo "Skipping required packages installation because it is already installed."
 		fi
 
 
@@ -383,7 +385,7 @@ install(){
 
 
 		# update yum if necessary
-		if [ "$UPDATE_NECESSARY" == "true" ]; then
+		if [ "$UPDATE_NECESSARY" = "true" ]; then
 			echo "apt update..."
 			sudo apt-get -y update
 		fi
@@ -410,6 +412,8 @@ install(){
 		if [ "$INSTALL_REQUIRED_PCK" == "true" ]; then
 			echo "Installing required packages $REQUIRED_PCK..."
 			sudo apt-get -y install $REQUIRED_PCK
+		else
+			echo "Skipping required packages installation because it is already installed."
 		fi
 
 
