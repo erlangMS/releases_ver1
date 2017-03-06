@@ -12,7 +12,7 @@ To install the ems-bus in the Debian, Ubuntu or CentOS, follow the instructions 
 $ sudo setup-emsbus-linux.x86_64.sh
 ```
 
-##3) If everything is OK, go to http://localhost:2301/ on your browser.
+##3) If everything is ok, go to http://localhost:2301/ on your browser.
 =====
 
 *{"message": "It works!!!"}*
