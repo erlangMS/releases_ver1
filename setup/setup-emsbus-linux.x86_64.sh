@@ -285,7 +285,7 @@ install(){
 			sudo systemctl stop ems-bus > /dev/null 2>&1
 			VERSION_INSTALLED=$(rpm -qi ems-bus | grep Version | cut -d: -f2)
 			echo "Removing previously installed$VERSION_INSTALLED version."
-			if sudo rpm -e ems-bus > dev/null ; then
+			if sudo rpm -e ems-bus > /dev/null ; then
 				echo "Installing $SETUP_PACKAGE..."
 				sudo rpm -ihv $SETUP_PACKAGE
 			else
