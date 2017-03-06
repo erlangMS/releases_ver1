@@ -151,7 +151,7 @@ install(){
 	echo "============================================================================="
 
 
-	if [ "$LINUX_DISTRO" == "centos" ]; then
+	if [ "$LINUX_DISTRO" = "centos" ]; then
 
 		# ***** EPEL 7 repository **********
 		if ! rpm -qi epel-release  >> /dev/null ; then
@@ -285,14 +285,16 @@ install(){
 			sudo systemctl stop ems-bus > /dev/null 2>&1
 			VERSION_INSTALLED=$(rpm -qi ems-bus | grep Version | cut -d: -f2)
 			echo "Removing previously installed$VERSION_INSTALLED version."
-			if sudo rpm -e ems-bus ; then
+			if sudo rpm -e ems-bus > dev/null ; then
 				echo "Installing $SETUP_PACKAGE..."
 				sudo rpm -ihv $SETUP_PACKAGE
+			else
+				echo "It was not possible remove previously installed$VERSION_INSTALLED version."
 			fi
 		fi
 
 
-	elif [ "$LINUX_DISTRO" == "ubuntu" ]; then
+	elif [ "$LINUX_DISTRO" = "ubuntu" ]; then
 		# ***** Erlang Runtime Library **********
 
 		# erlang-solutions is a rpm package for Erlang repository
@@ -352,13 +354,15 @@ install(){
 			sudo systemctl stop ems-bus > /dev/null 2>&1
 			VERSION_INSTALLED=$(dpkg -s ems-bus | grep Version | cut -d: -f2)
 			echo "Removing previously installed$VERSION_INSTALLED version."
-			if sudo apt-get -y remove ems-bus ; then
+			if sudo apt-get -y remove ems-bus > /dev/null; then
 				echo "Installing $SETUP_PACKAGE..."
 				sudo dpkg -i $SETUP_PACKAGE
+			else
+				echo "It was not possible remove previously installed$VERSION_INSTALLED version."
 			fi
 		fi
 
-	elif [ "$LINUX_DISTRO" == "debian" ]; then
+	elif [ "$LINUX_DISTRO" = "debian" ]; then
 
 		# ***** Erlang Runtime Library **********
 
@@ -418,9 +422,11 @@ install(){
 			sudo systemctl stop ems-bus > /dev/null 2>&1
 			VERSION_INSTALLED=$(dpkg -s ems-bus | grep Version | cut -d: -f2)
 			echo "Removing previously installed$VERSION_INSTALLED version."
-			if sudo apt-get -y remove ems-bus ; then
+			if sudo apt-get -y remove ems-bus > /dev/null; then
 				echo "Installing $SETUP_PACKAGE..."
 				sudo dpkg -i $SETUP_PACKAGE
+			else
+				echo "It was not possible remove previously installed$VERSION_INSTALLED version."
 			fi
 		fi
 
@@ -450,7 +456,7 @@ check_send_email(){
 	# send log by e-mail
 	if [[ $ENVIA_LOG_EMAIL =~ [Yy] ]]; then
 		EMAIL_OK="false"
-		until [ $EMAIL_OK == "true" ]; do
+		until [ $EMAIL_OK = "true" ]; do
 			printf "Enter your e-mail: "
 			read SMTP_DE
 			if [[ $SMTP_DE =~ $SMTP_RE_CHECK ]]; then
