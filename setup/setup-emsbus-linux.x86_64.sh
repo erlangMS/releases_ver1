@@ -287,7 +287,11 @@ install(){
 			echo "Removing previously installed$VERSION_INSTALLED version."
 			if sudo rpm -e ems-bus > /dev/null ; then
 				echo "Installing $SETUP_PACKAGE..."
-				sudo rpm -ihv $SETUP_PACKAGE
+				if sudo rpm -ihv $SETUP_PACKAGE; then
+					echo "Installation done successfully!!!"
+				else
+					echo "Installation was unsuccessful."
+				fi
 			else
 				echo "It was not possible remove previously installed$VERSION_INSTALLED version."
 			fi
@@ -358,7 +362,11 @@ install(){
 			echo "Removing previously installed$VERSION_INSTALLED version."
 			if sudo apt-get -y remove ems-bus > /dev/null; then
 				echo "Installing $SETUP_PACKAGE..."
-				sudo dpkg -i $SETUP_PACKAGE
+				if sudo dpkg -i $SETUP_PACKAGE; then
+					echo "Installation done successfully!!!"
+				else 
+					echo "Installation was unsuccessful."
+				fi
 			else
 				echo "It was not possible remove previously installed$VERSION_INSTALLED version."
 			fi
@@ -428,22 +436,17 @@ install(){
 			echo "Removing previously installed$VERSION_INSTALLED version."
 			if sudo apt-get -y remove ems-bus > /dev/null; then
 				echo "Installing $SETUP_PACKAGE..."
-				sudo dpkg -i $SETUP_PACKAGE
+				if sudo dpkg -i $SETUP_PACKAGE; then
+					echo "Installation done successfully!!!"
+				else 
+					echo "Installation was unsuccessful."
+				fi
 			else
 				echo "It was not possible remove previously installed$VERSION_INSTALLED version."
 			fi
 		fi
 
 	fi	
-
-
-	sudo systemctl daemon-reload
-
-	if curl localhost:2301 > /dev/null 2>&1; then
-		echo "Installation done successfully!!!"
-	else
-		echo "Installation was unsuccessful."
-	fi
 }
 
 
