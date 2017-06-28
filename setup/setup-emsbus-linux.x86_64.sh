@@ -13,7 +13,7 @@
 # -----------------------------------------------------------------------------------------------------
 # 15/01/2017  Everton Agilar     Initial release
 # 05/03/2017  Everton Agilar     Make sure only root can run our script
-# 28/07/2017  Everton Agilar     Remove sudo command
+# 28/07/2017  Everton Agilar     Remove sudo command and add options --send_email, --email_to
 #
 #
 #
@@ -59,10 +59,21 @@ LOG_FILE="setup_emsbus_""$SETUP_VERSION""_$(date '+%d%m%Y_%H%M%S').log"
 # SMTP parameter
 SMTP_SERVER="mail.unb.br"
 SMTP_PORT=587
-SMTP_DE=""
-SMTP_PARA=""
+SMTP_FROM=""
+SMTP_TO=""
 SMTP_PASSWD=""
 SMTP_RE_CHECK="^[a-z0-9!#\$%&'*+/=?^_\`{|}~-]+(\.[a-z0-9!#$%&'*+/=?^_\`{|}~-]+)*@([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z0-9]([a-z0-9-]*[a-z0-9])?\$"
+
+
+# Optional parameters
+for P in $*; do
+	if [[ "$P" =~ ^--send_?email$ ]]; then
+		SEND_EMAIL="true"
+	elif [[ "$P" =~ ^--email_to=.+$ ]]; then
+		SMTP_TO="$(echo $P | cut -d= -f2)"
+	fi
+done
+
 
 # Function to send email
 # Parameters:
@@ -79,14 +90,14 @@ from email.Utils import formatdate
 try:
 	smtp = smtplib.SMTP("$SMTP_SERVER", $SMTP_PORT)
 	smtp.starttls()
-	smtp.login("$SMTP_DE", "$SMTP_PASSWD")
+	smtp.login("$SMTP_FROM", "$SMTP_PASSWD")
 	msg = MIMEText("""$SUBJECT""")
 	msg['Subject'] = "$TITULO_MSG"
-	msg['From'] = "$SMTP_DE"
-	msg['To'] = "$SMTP_PARA"
+	msg['From'] = "$SMTP_FROM"
+	msg['To'] = "$SMTP_TO"
 	msg['Date'] = formatdate(localtime=True)
 	msg['Content-Type'] = 'text/plain; charset=utf-8'
-	smtp.sendmail("$SMTP_DE", ["$SMTP_PARA"], msg.as_string())
+	smtp.sendmail("$SMTP_FROM", ["$SMTP_TO"], msg.as_string())
 	smtp.quit()
 	exit(0)
 except Exception as e:
@@ -452,33 +463,38 @@ install(){
 
 # check send email
 check_send_email(){
-	# Ask if you want to send log by email
-	while [[ ! $ENVIA_LOG_EMAIL =~ [YyNn] ]]; do
-		printf "You want to send the installation log via email? [Yn]"
-		read ENVIA_LOG_EMAIL
-	done
+	if [ "$SEND_EMAIL" = "true" ]; then
+		
+		if [ "$SMTP_TO" = "" ]; then
+			# Ask if you want to send log by email
+			while [[ ! $ENVIA_LOG_EMAIL =~ [YyNn] ]]; do
+				printf "You want to send the installation log via email? [Yn]"
+				read ENVIA_LOG_EMAIL
+			done
+		fi
 
-	echo ""
-
-	# send log by e-mail
-	if [[ $ENVIA_LOG_EMAIL =~ [Yy] ]]; then
-		EMAIL_OK="false"
-		until [ $EMAIL_OK = "true" ]; do
-			printf "Enter your e-mail: "
-			read SMTP_DE
-			if [[ $SMTP_DE =~ $SMTP_RE_CHECK ]]; then
-				EMAIL_OK="true"
-			else
-				echo "E-mail $SMTP_DE is invalid"
-			fi
-		done
-		SMTP_PARA=$SMTP_DE
-		printf "Enter your password: "
-		read -s SMTP_PASSWD
 		echo ""
-		echo "Send email, please wait..."
-		TextLog=$(cat $LOG_FILE)
-		send_email "ERLANGMS installation log on server $LINUX_DESCRIPTION << IP $LINUX_IP_SERVER >>" "$TextLog" && echo "Log sent by email to $SMTP_PARA."
+
+		# send log by e-mail
+		if [[ $ENVIA_LOG_EMAIL =~ [Yy] ]]; then
+			EMAIL_OK="false"
+			until [ $EMAIL_OK = "true" ]; do
+				printf "Enter your e-mail: "
+				read SMTP_FROM
+				if [[ $SMTP_FROM =~ $SMTP_RE_CHECK ]]; then
+					EMAIL_OK="true"
+				else
+					echo "E-mail $SMTP_FROM is invalid"
+				fi
+			done
+			SMTP_TO=$SMTP_FROM
+			printf "Enter your password: "
+			read -s SMTP_PASSWD
+			echo ""
+			echo "Send email, please wait..."
+			TextLog=$(cat $LOG_FILE)
+			send_email "ERLANGMS installation log on server $LINUX_DESCRIPTION << IP $LINUX_IP_SERVER >>" "$TextLog" && echo "Log sent by email to $SMTP_TO."
+		fi
 	fi
 }
 
