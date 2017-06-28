@@ -165,7 +165,7 @@ install(){
 	if [ "$LINUX_DISTRO" = "centos" ]; then
 
 		# ***** EPEL 7 repository **********
-		if ! rpm -qi epel-release  >> /dev/null ; then
+		if ! rpm -qi epel-release  >> /dev/null 2>&1; then
 			echo "Installing the latest EPEL 7 repository..."
 			 yum -y install epel-release
 			UPDATE_NECESSARY="true"
@@ -313,7 +313,7 @@ install(){
 		# ***** Erlang Runtime Library **********
 
 		# erlang-solutions is a rpm package for Erlang repository
-		if ! dpkg -s erlang-solutions > /dev/null ; then
+		if ! dpkg -s erlang-solutions > /dev/null 2>&1; then
 			echo "Adding Erlang repository entry."
 			wget -nv https://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb
 
@@ -388,7 +388,7 @@ install(){
 		# ***** Erlang Runtime Library **********
 
 		# erlang-solutions is a rpm package for Erlang repository
-		if ! dpkg -s erlang-solutions > /dev/null ; then
+		if ! dpkg -s erlang-solutions > /dev/null 2>&1 ; then
 			echo "Adding Erlang repository entry."
 			wget -nv https://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb
 
