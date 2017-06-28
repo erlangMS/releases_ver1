@@ -13,6 +13,7 @@
 # -----------------------------------------------------------------------------------------------------
 # 15/01/2017  Everton Agilar     Initial release
 # 05/03/2017  Everton Agilar     Make sure only root can run our script
+# 28/07/2017  Everton Agilar     Remove sudo command
 #
 #
 #
@@ -25,7 +26,6 @@ if [[ $EUID -ne 0 ]]; then
    echo "This setup must be run as root" 1>&2
    exit 1
 fi
-
 
 # Identify the linux distribution: ubuntu, debian, centos
 LINUX_DISTRO=$(awk -F"=" '{ if ($1 == "ID"){ 
@@ -156,7 +156,7 @@ install(){
 		# ***** EPEL 7 repository **********
 		if ! rpm -qi epel-release  >> /dev/null ; then
 			echo "Installing the latest EPEL 7 repository..."
-			sudo yum -y install epel-release
+			 yum -y install epel-release
 			UPDATE_NECESSARY="true"
 		else
 			echo "Skipping EPEL 7 repository installation because it is already installed."
@@ -177,7 +177,7 @@ install(){
 				exit 1
 			fi
 
-			sudo rpm -Uvh erlang-solutions-1.0-1.noarch.rpm
+			 rpm -Uvh erlang-solutions-1.0-1.noarch.rpm
 			UPDATE_NECESSARY="true"
 		fi
 
@@ -185,14 +185,14 @@ install(){
 		# update yum if necessary
 		if [ "$UPDATE_NECESSARY" == "true" ]; then
 			echo "yum update..."
-			sudo yum -y update
+			 yum -y update
 		fi
 
 
 		# Check if Erlang runtime already exist
 		if ! erl -version 2> /dev/null;  then
 			echo "Installing Erlang Runtime Library packages..."
-			sudo yum -y install erlang-hipe-19.2-1.el7.centos.x86_64 \
+			 yum -y install erlang-hipe-19.2-1.el7.centos.x86_64 \
 			erlang-erl_docgen-19.2-1.el7.centos.x86_64 \
 			erlang-erts-19.2-1.el7.centos.x86_64 \
 			erlang-asn1-19.2-1.el7.centos.x86_64 \
@@ -232,18 +232,18 @@ install(){
 			
 			if ! rpm -qi yum-utils  >> /dev/null ; then
 				echo "Installing yum-utils..."
-				sudo yum -y install yum-utils 
+				 yum -y install yum-utils 
 			else
 				echo "Skipping yum-utils installation because it is already installed."
 			fi
 
 			echo "Installing python 3.4 and its libraries..."
-			sudo yum -y install python34 
+			 yum -y install python34 
 
 			if ! pip3 --version 2> /dev/null;  then
 				echo "Installing pip..."
 				curl -O https://bootstrap.pypa.io/get-pip.py
-				sudo /usr/bin/python3.4 get-pip.py 
+				 /usr/bin/python3.4 get-pip.py 
 			fi
 		else
 			echo "Skipping python34 installation because it is already installed."
@@ -254,13 +254,13 @@ install(){
 		# ******** Install OpenLdap tools *********
 		if ! rpm -qi openldap >> /dev/null ; then
 			echo "Installing openldap package..."
-			sudo yum -y install openldap
+			 yum -y install openldap
 		else
 			echo "Skipping openldap installation because it is already installed."
 		fi
 		if ! rpm -qi openldap-clients >> /dev/null ; then
 			echo "Installing openldap-clients package..."
-			sudo yum -y install openldap-clients
+			 yum -y install openldap-clients
 		else
 			echo "Skipping openldap-clients installation because it is already installed."
 		fi
@@ -270,7 +270,7 @@ install(){
 		# ****** Install FreeTDS driver (driver for SQL Server) ****
 		if ! rpm -qi freetds >> /dev/null ; then
 			echo "Installing driver SQL-Server freetds..."
-			sudo yum -y install freetds.x86_64 freetds-devel.x86_64
+			 yum -y install freetds.x86_64 freetds-devel.x86_64
 		else
 			echo "Skipping driver SQL-Server freetds installation because it is already installed."
 		fi
@@ -280,14 +280,14 @@ install(){
 		
 		if ! rpm -qi ems-bus >> /dev/null ; then
 			echo "Installing $SETUP_PACKAGE..."
-			sudo rpm -ihv $SETUP_FILE
+			 rpm -ihv $SETUP_FILE
 		else
-			sudo systemctl stop ems-bus > /dev/null 2>&1
+			 systemctl stop ems-bus > /dev/null 2>&1
 			VERSION_INSTALLED=$(rpm -qi ems-bus | grep Version | cut -d: -f2)
 			echo "Removing previously installed$VERSION_INSTALLED version."
-			if sudo rpm -e ems-bus > /dev/null ; then
+			if  rpm -e ems-bus > /dev/null ; then
 				echo "Installing $SETUP_PACKAGE..."
-				if sudo rpm -ihv $SETUP_PACKAGE; then
+				if  rpm -ihv $SETUP_PACKAGE; then
 					echo "Installation done successfully!!!"
 				else
 					echo "Installation was unsuccessful."
@@ -312,7 +312,7 @@ install(){
 				exit 1
 			fi
 
-			sudo dpkg -i erlang-solutions_1.0_all.deb
+			 dpkg -i erlang-solutions_1.0_all.deb
 			UPDATE_NECESSARY="true"
 		fi
 
@@ -320,14 +320,14 @@ install(){
 		# update yum if necessary
 		if [ "$UPDATE_NECESSARY" = "true" ]; then
 			echo "apt update..."
-			sudo apt-get -y update
+			 apt-get -y update
 		fi
 
 
 		# Check if Erlang runtime already exist
 		if ! erl -version 2> /dev/null;  then
 			echo "Installing Erlang Runtime Library packages..."
-			sudo sudo apt-get install erlang
+			  apt-get install erlang
 		else
 			echo "Skipping Erlang Runtime Library installation because it is already installed."
 		fi
@@ -345,7 +345,7 @@ install(){
 		done
 		if [ "$INSTALL_REQUIRED_PCK" = "true" ]; then
 			echo "Installing required packages $REQUIRED_PCK..."
-			sudo apt-get -y install $REQUIRED_PCK
+			 apt-get -y install $REQUIRED_PCK
 		else
 			echo "Skipping required packages installation because it is already installed."
 		fi
@@ -355,14 +355,14 @@ install(){
 		
 		if ! dpkg -s ems-bus > /dev/null 2>&1 ; then
 			echo "Installing $SETUP_PACKAGE..."
-			sudo dpkg -i $SETUP_PACKAGE
+			 dpkg -i $SETUP_PACKAGE
 		else
-			sudo systemctl stop ems-bus > /dev/null 2>&1
+			 systemctl stop ems-bus > /dev/null 2>&1
 			VERSION_INSTALLED=$(dpkg -s ems-bus | grep Version | cut -d: -f2)
 			echo "Removing previously installed$VERSION_INSTALLED version."
-			if sudo apt-get -y remove ems-bus > /dev/null; then
+			if  apt-get -y remove ems-bus > /dev/null; then
 				echo "Installing $SETUP_PACKAGE..."
-				if sudo dpkg -i $SETUP_PACKAGE; then
+				if  dpkg -i $SETUP_PACKAGE; then
 					echo "Installation done successfully!!!"
 				else 
 					echo "Installation was unsuccessful."
@@ -387,7 +387,7 @@ install(){
 				exit 1
 			fi
 
-			sudo dpkg -i erlang-solutions_1.0_all.deb
+			 dpkg -i erlang-solutions_1.0_all.deb
 			UPDATE_NECESSARY="true"
 		fi
 
@@ -395,13 +395,13 @@ install(){
 		# update yum if necessary
 		if [ "$UPDATE_NECESSARY" = "true" ]; then
 			echo "apt update..."
-			sudo apt-get -y update
+			 apt-get -y update
 		fi
 
 		# Check if Erlang runtime already exist
 		if ! erl -version 2> /dev/null;  then
 			echo "Installing Erlang Runtime Library packages..."
-			sudo sudo apt-get install erlang
+			  apt-get install erlang
 		else
 			echo "Skipping Erlang Runtime Library installation because it is already installed."
 		fi
@@ -419,7 +419,7 @@ install(){
 		done
 		if [ "$INSTALL_REQUIRED_PCK" == "true" ]; then
 			echo "Installing required packages $REQUIRED_PCK..."
-			sudo apt-get -y install $REQUIRED_PCK
+			 apt-get -y install $REQUIRED_PCK
 		else
 			echo "Skipping required packages installation because it is already installed."
 		fi
@@ -429,14 +429,14 @@ install(){
 		
 		if ! dpkg -s ems-bus >> /dev/null ; then
 			echo "Installing $SETUP_PACKAGE..."
-			sudo dpkg -i $SETUP_PACKAGE
+			 dpkg -i $SETUP_PACKAGE
 		else
-			sudo systemctl stop ems-bus > /dev/null 2>&1
+			 systemctl stop ems-bus > /dev/null 2>&1
 			VERSION_INSTALLED=$(dpkg -s ems-bus | grep Version | cut -d: -f2)
 			echo "Removing previously installed$VERSION_INSTALLED version."
-			if sudo apt-get -y remove ems-bus > /dev/null; then
+			if  apt-get -y remove ems-bus > /dev/null; then
 				echo "Installing $SETUP_PACKAGE..."
-				if sudo dpkg -i $SETUP_PACKAGE; then
+				if  dpkg -i $SETUP_PACKAGE; then
 					echo "Installation done successfully!!!"
 				else 
 					echo "Installation was unsuccessful."
