@@ -49,12 +49,12 @@ LINUX_VERSION_ID=$(awk -F"=" '{ if ($1 == "VERSION_ID"){
 # Primary IP of the server
 LINUX_IP_SERVER=$(hostname -I | cut -d" " -f1)
 
-
+VERSION_SCRIPT="1.0.0"
 CURRENT_DIR=$(pwd)
 TMP_DIR="/tmp/erlangms/setup_$SETUP_VERSION_$$/"
 mkdir -p $TMP_DIR && cd $TMP_DIR
 LOG_FILE="setup_emsbus_""$SETUP_VERSION""_$(date '+%d%m%Y_%H%M%S').log"
-
+SKIP_INSTALL_LIBS="false"
 
 # SMTP parameter
 SMTP_SERVER="mail.unb.br"
@@ -65,14 +65,15 @@ SMTP_PASSWD=""
 SMTP_RE_CHECK="^[a-z0-9!#\$%&'*+/=?^_\`{|}~-]+(\.[a-z0-9!#$%&'*+/=?^_\`{|}~-]+)*@([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z0-9]([a-z0-9-]*[a-z0-9])?\$"
 
 
-# Optional parameters
-for P in $*; do
-	if [[ "$P" =~ ^--send_?email$ ]]; then
-		SEND_EMAIL="true"
-	elif [[ "$P" =~ ^--email_to=.+$ ]]; then
-		SMTP_TO="$(echo $P | cut -d= -f2)"
-	fi
-done
+# show help 
+help(){
+	echo "Setup ErlangMS ESB utility  (Version $VERSION_SCRIPT)"
+	echo "How to use: sudo ./setup-emsbus-linux.x86_64"
+	echo
+	echo "Additional parameters:"
+	echo "  --skip_install_libs    -> skip installation of libs"
+	exit 1
+}
 
 
 # Function to send email
@@ -113,7 +114,9 @@ install(){
 	exec > >(tee -a ${LOG_FILE} )
 	exec 2> >(tee -a ${LOG_FILE} >&2)
 
-	echo "Preparing for installation, please wait..."
+	echo "Preparing for installation of ErlangMS ESB, please wait..."
+	[ "$SKIP_INSTALL_LIBS" = "true" ] && echo "Skip install libs enabled!"
+	
 
 	# Indicates whether it will be necessary to update the repository
 	UPDATE_NECESSARY="false"
@@ -158,135 +161,136 @@ install(){
 	echo "Version: $SETUP_VERSION"
 	echo "Log file: $LOG_FILE" 
 	echo "Host ip: $LINUX_IP_SERVER"
+	echo "Skip install libs: $SKIP_INSTALL_LIBS"
 	echo "Date: $(date '+%d/%m/%Y %H:%M:%S')"
 	echo "============================================================================="
 
 
 	if [ "$LINUX_DISTRO" = "centos" ]; then
 
-		# ***** EPEL 7 repository **********
-		if ! rpm -qi epel-release  >> /dev/null 2>&1; then
-			echo "Installing the latest EPEL 7 repository..."
-			 yum -y install epel-release
-			UPDATE_NECESSARY="true"
-		else
-			echo "Skipping EPEL 7 repository installation because it is already installed."
-		fi
+		if [ "$SKIP_INSTALL_LIBS" = "false" ]; then
 
-
-
-		# ***** Erlang Runtime Library **********
-
-		# erlang-solutions is a rpm package for Erlang repository
-		if ! rpm -qi erlang-solutions >> /dev/null ; then
-			echo "Adding Erlang repository entry."
-			wget -nv https://packages.erlang-solutions.com/erlang-solutions-1.0-1.noarch.rpm
-
-			# Check internet connectivity
-			if [ "$?" -eq "4" ]; then
-				echo "Make sure your DNS is well configured or if there is Internet on this host. Canceling installation..."
-				exit 1
-			fi
-
-			 rpm -Uvh erlang-solutions-1.0-1.noarch.rpm
-			UPDATE_NECESSARY="true"
-		fi
-
-
-		# update yum if necessary
-		if [ "$UPDATE_NECESSARY" == "true" ]; then
-			echo "yum update..."
-			 yum -y update
-		fi
-
-
-		# Check if Erlang runtime already exist
-		if ! erl -version 2> /dev/null;  then
-			echo "Installing Erlang Runtime Library packages..."
-			 yum -y install erlang-hipe-19.2-1.el7.centos.x86_64 \
-			erlang-erl_docgen-19.2-1.el7.centos.x86_64 \
-			erlang-erts-19.2-1.el7.centos.x86_64 \
-			erlang-asn1-19.2-1.el7.centos.x86_64 \
-			erlang-eunit-19.2-1.el7.centos.x86_64 \
-			erlang-syntax_tools-19.2-1.el7.centos.x86_64 \
-			erlang-runtime_tools-19.2-1.el7.centos.x86_64 \
-			erlang-erl_interface-19.2-1.el7.centos.x86_64 \
-			erlang-ic-19.2-1.el7.centos.x86_64 \
-			erlang-stdlib-19.2-1.el7.centos.x86_64 \
-			erlang-ssl-19.2-1.el7.centos.x86_64 \
-			erlang-eldap-19.2-1.el7.centos.x86_64 \
-			erlang-crypto-19.2-1.el7.centos.x86_64 \
-			erlang-public_key-19.2-1.el7.centos.x86_64 \
-			erlang-odbc-19.2-1.el7.centos.x86_64 \
-			erlang-compiler-19.2-1.el7.centos.x86_64 \
-			erlang-tools-19.2-1.el7.centos.x86_64 \
-			erlang-edoc-19.2-1.el7.centos.x86_64 \
-			erlang-kernel-19.2-1.el7.centos.x86_64 \
-			erlang-inets-19.2-1.el7.centos.x86_64 \
-			erlang-xmerl-19.2-1.el7.centos.x86_64 \
-			erlang-parsetools-19.2-1.el7.centos.x86_64 \
-			erlang-mnesia-19.2-1.el7.centos.x86_64 \
-			erlang-doc-19.2-1.el7.centos.x86_64 \
-			erlang-jinterface-19.2-1.el7.centos.x86_64 \
-			erlang-gs-19.2-1.el7.centos.x86_64 \
-			erlang-solutions-1.0-1.noarch \
-			erlang-sasl-19.2-1.el7.centos.x86_64
-		else
-			echo "Skipping Erlang Runtime Library installation because it is already installed."
-		fi
-
-
-
-		# ****** Install Python3 from EPEL Repository  ********
-		if ! rpm -qi python34 >> /dev/null ; then
-			echo "Preparing to install python34..."
-			
-			if ! rpm -qi yum-utils  >> /dev/null ; then
-				echo "Installing yum-utils..."
-				 yum -y install yum-utils 
+			# ***** EPEL 7 repository **********
+			if ! rpm -qi epel-release  >> /dev/null 2>&1; then
+				echo "Installing the latest EPEL 7 repository..."
+				 yum -y install epel-release
+				UPDATE_NECESSARY="true"
 			else
-				echo "Skipping yum-utils installation because it is already installed."
+				echo "Skipping EPEL 7 repository installation because it is already installed."
 			fi
 
-			echo "Installing python 3.4 and its libraries..."
-			 yum -y install python34 
+			# ***** Erlang Runtime Library **********
 
-			if ! pip3 --version 2> /dev/null;  then
-				echo "Installing pip..."
-				curl -O https://bootstrap.pypa.io/get-pip.py
-				 /usr/bin/python3.4 get-pip.py 
+			# erlang-solutions is a rpm package for Erlang repository
+			if ! rpm -qi erlang-solutions >> /dev/null ; then
+				echo "Adding Erlang repository entry."
+				wget -nv https://packages.erlang-solutions.com/erlang-solutions-1.0-1.noarch.rpm
+
+				# Check internet connectivity
+				if [ "$?" -eq "4" ]; then
+					echo "Make sure your DNS is well configured or if there is Internet on this host. Canceling installation..."
+					exit 1
+				fi
+
+				 rpm -Uvh erlang-solutions-1.0-1.noarch.rpm
+				UPDATE_NECESSARY="true"
 			fi
-		else
-			echo "Skipping python34 installation because it is already installed."
+
+
+			# update yum if necessary
+			if [ "$UPDATE_NECESSARY" == "true" ]; then
+				echo "yum update..."
+				 yum -y update
+			fi
+
+
+			# Check if Erlang runtime already exist
+			if ! erl -version 2> /dev/null;  then
+				echo "Installing Erlang Runtime Library packages..."
+				 yum -y install erlang-hipe-19.2-1.el7.centos.x86_64 \
+				erlang-erl_docgen-19.2-1.el7.centos.x86_64 \
+				erlang-erts-19.2-1.el7.centos.x86_64 \
+				erlang-asn1-19.2-1.el7.centos.x86_64 \
+				erlang-eunit-19.2-1.el7.centos.x86_64 \
+				erlang-syntax_tools-19.2-1.el7.centos.x86_64 \
+				erlang-runtime_tools-19.2-1.el7.centos.x86_64 \
+				erlang-erl_interface-19.2-1.el7.centos.x86_64 \
+				erlang-ic-19.2-1.el7.centos.x86_64 \
+				erlang-stdlib-19.2-1.el7.centos.x86_64 \
+				erlang-ssl-19.2-1.el7.centos.x86_64 \
+				erlang-eldap-19.2-1.el7.centos.x86_64 \
+				erlang-crypto-19.2-1.el7.centos.x86_64 \
+				erlang-public_key-19.2-1.el7.centos.x86_64 \
+				erlang-odbc-19.2-1.el7.centos.x86_64 \
+				erlang-compiler-19.2-1.el7.centos.x86_64 \
+				erlang-tools-19.2-1.el7.centos.x86_64 \
+				erlang-edoc-19.2-1.el7.centos.x86_64 \
+				erlang-kernel-19.2-1.el7.centos.x86_64 \
+				erlang-inets-19.2-1.el7.centos.x86_64 \
+				erlang-xmerl-19.2-1.el7.centos.x86_64 \
+				erlang-parsetools-19.2-1.el7.centos.x86_64 \
+				erlang-mnesia-19.2-1.el7.centos.x86_64 \
+				erlang-doc-19.2-1.el7.centos.x86_64 \
+				erlang-jinterface-19.2-1.el7.centos.x86_64 \
+				erlang-gs-19.2-1.el7.centos.x86_64 \
+				erlang-solutions-1.0-1.noarch \
+				erlang-sasl-19.2-1.el7.centos.x86_64
+			else
+				echo "Skipping Erlang Runtime Library installation because it is already installed."
+			fi
+
+
+			# ****** Install Python3 from EPEL Repository  ********
+			if ! rpm -qi python34 >> /dev/null ; then
+				echo "Preparing to install python34..."
+				
+				if ! rpm -qi yum-utils  >> /dev/null ; then
+					echo "Installing yum-utils..."
+					 yum -y install yum-utils 
+				else
+					echo "Skipping yum-utils installation because it is already installed."
+				fi
+
+				echo "Installing python 3.4 and its libraries..."
+				 yum -y install python34 
+
+				if ! pip3 --version 2> /dev/null;  then
+					echo "Installing pip..."
+					curl -O https://bootstrap.pypa.io/get-pip.py
+					 /usr/bin/python3.4 get-pip.py 
+				fi
+			else
+				echo "Skipping python34 installation because it is already installed."
+			fi
+
+
+
+			# ******** Install OpenLdap tools *********
+			if ! rpm -qi openldap >> /dev/null ; then
+				echo "Installing openldap package..."
+				 yum -y install openldap
+			else
+				echo "Skipping openldap installation because it is already installed."
+			fi
+			if ! rpm -qi openldap-clients >> /dev/null ; then
+				echo "Installing openldap-clients package..."
+				 yum -y install openldap-clients
+			else
+				echo "Skipping openldap-clients installation because it is already installed."
+			fi
+
+
+
+			# ****** Install FreeTDS driver (driver for SQL Server) ****
+			if ! rpm -qi freetds >> /dev/null ; then
+				echo "Installing driver SQL-Server freetds..."
+				 yum -y install freetds.x86_64 freetds-devel.x86_64
+			else
+				echo "Skipping driver SQL-Server freetds installation because it is already installed."
+			fi
+
 		fi
-
-
-
-		# ******** Install OpenLdap tools *********
-		if ! rpm -qi openldap >> /dev/null ; then
-			echo "Installing openldap package..."
-			 yum -y install openldap
-		else
-			echo "Skipping openldap installation because it is already installed."
-		fi
-		if ! rpm -qi openldap-clients >> /dev/null ; then
-			echo "Installing openldap-clients package..."
-			 yum -y install openldap-clients
-		else
-			echo "Skipping openldap-clients installation because it is already installed."
-		fi
-
-
-
-		# ****** Install FreeTDS driver (driver for SQL Server) ****
-		if ! rpm -qi freetds >> /dev/null ; then
-			echo "Installing driver SQL-Server freetds..."
-			 yum -y install freetds.x86_64 freetds-devel.x86_64
-		else
-			echo "Skipping driver SQL-Server freetds installation because it is already installed."
-		fi
-
-
+		
 		# ***** Install or update ems-bus *****
 		
 		if ! rpm -qi ems-bus >> /dev/null ; then
@@ -310,68 +314,71 @@ install(){
 
 
 	elif [ "$LINUX_DISTRO" = "ubuntu" ]; then
-		# ***** Erlang Runtime Library **********
-
-		# erlang-solutions is a rpm package for Erlang repository
-		if ! dpkg -s erlang-solutions > /dev/null 2>&1; then
-			echo "Adding Erlang repository entry."
-			wget -nv https://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb
-
-			# Check internet connectivity
-			if [ "$?" -eq "4" ]; then
-				echo "Make sure your DNS is well configured or if there is Internet on this host. Canceling installation..."
-				exit 1
-			fi
-
-			 dpkg -i erlang-solutions_1.0_all.deb
-			UPDATE_NECESSARY="true"
-		fi
-
-
-		# update yum if necessary
-		if [ "$UPDATE_NECESSARY" = "true" ]; then
-			echo "apt update..."
-			 apt-get -y update
-		fi
-
-
-		# Check if Erlang runtime already exist
-		if ! erl -version 2> /dev/null;  then
-			echo "Installing Erlang Runtime Library packages..."
-			  apt-get install erlang
-		else
-			echo "Skipping Erlang Runtime Library installation because it is already installed."
-		fi
-
-
-		# **** Install required packages ****
 		
-		REQUIRED_PCK="libiodbc2 unixodbc tdsodbc:amd64 odbcinst1debian2:amd64 odbcinst libsqliteodbc:amd64 libsqliteodbc libodbc1 libsqlite0 freetds-common ldap-utils"
-		INSTALL_REQUIRED_PCK="false"
-		for PCK in $REQUIRED_PCK; do 
-			if ! dpkg -s $PCK > /dev/null 2>&1 ; then
-				INSTALL_REQUIRED_PCK="true"
-				break
+		if [ "$SKIP_INSTALL_LIBS" = "false" ]; then
+		
+			# ***** Erlang Runtime Library **********
+
+			# erlang-solutions is a rpm package for Erlang repository
+			if ! dpkg -s erlang-solutions > /dev/null 2>&1; then
+				echo "Adding Erlang repository entry."
+				wget -nv https://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb
+
+				# Check internet connectivity
+				if [ "$?" -eq "4" ]; then
+					echo "Make sure your DNS is well configured or if there is Internet on this host. Canceling installation..."
+					exit 1
+				fi
+
+				 dpkg -i erlang-solutions_1.0_all.deb
+				UPDATE_NECESSARY="true"
 			fi
-		done
-		if [ "$INSTALL_REQUIRED_PCK" = "true" ]; then
-			echo "Installing required packages $REQUIRED_PCK..."
-			 apt-get -y install $REQUIRED_PCK
-		else
-			echo "Skipping required packages installation because it is already installed."
+
+
+			# update yum if necessary
+			if [ "$UPDATE_NECESSARY" = "true" ]; then
+				echo "apt update..."
+				 apt-get -y update
+			fi
+
+
+			# Check if Erlang runtime already exist
+			if ! erl -version 2> /dev/null;  then
+				echo "Installing Erlang Runtime Library packages..."
+				  apt-get install erlang
+			else
+				echo "Skipping Erlang Runtime Library installation because it is already installed."
+			fi
+
+
+			# **** Install required packages ****
+			
+			REQUIRED_PCK="libiodbc2 unixodbc tdsodbc:amd64 odbcinst1debian2:amd64 odbcinst libsqliteodbc:amd64 libsqliteodbc libodbc1 libsqlite0 freetds-common ldap-utils"
+			INSTALL_REQUIRED_PCK="false"
+			for PCK in $REQUIRED_PCK; do 
+				if ! dpkg -s $PCK > /dev/null 2>&1 ; then
+					INSTALL_REQUIRED_PCK="true"
+					break
+				fi
+			done
+			if [ "$INSTALL_REQUIRED_PCK" = "true" ]; then
+				echo "Installing required packages $REQUIRED_PCK..."
+				 apt-get -y install $REQUIRED_PCK
+			else
+				echo "Skipping required packages installation because it is already installed."
+			fi
 		fi
-
-
+		
 		# ***** Install or update ems-bus *****
 		
 		if ! dpkg -s ems-bus > /dev/null 2>&1 ; then
 			echo "Installing $SETUP_PACKAGE..."
 			 dpkg -i $SETUP_PACKAGE
 		else
-			 systemctl stop ems-bus > /dev/null 2>&1
+			systemctl stop ems-bus > /dev/null 2>&1
 			VERSION_INSTALLED=$(dpkg -s ems-bus | grep Version | cut -d: -f2)
 			echo "Removing previously installed$VERSION_INSTALLED version."
-			if  apt-get -y remove ems-bus > /dev/null; then
+			if  apt-get -y remove ems-bus > /dev/null 2>&1; then
 				echo "Installing $SETUP_PACKAGE..."
 				if  dpkg -i $SETUP_PACKAGE; then
 					echo "Installation done successfully!!!"
@@ -385,54 +392,57 @@ install(){
 
 	elif [ "$LINUX_DISTRO" = "debian" ]; then
 
-		# ***** Erlang Runtime Library **********
-
-		# erlang-solutions is a rpm package for Erlang repository
-		if ! dpkg -s erlang-solutions > /dev/null 2>&1 ; then
-			echo "Adding Erlang repository entry."
-			wget -nv https://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb
-
-			# Check internet connectivity
-			if [ "$?" -eq "4" ]; then
-				echo "Make sure your DNS is well configured or if there is Internet on this host. Canceling installation..."
-				exit 1
-			fi
-
-			 dpkg -i erlang-solutions_1.0_all.deb
-			UPDATE_NECESSARY="true"
-		fi
-
-
-		# update yum if necessary
-		if [ "$UPDATE_NECESSARY" = "true" ]; then
-			echo "apt update..."
-			 apt-get -y update
-		fi
-
-		# Check if Erlang runtime already exist
-		if ! erl -version 2> /dev/null;  then
-			echo "Installing Erlang Runtime Library packages..."
-			  apt-get install erlang
-		else
-			echo "Skipping Erlang Runtime Library installation because it is already installed."
-		fi
-
-
-		# **** Install required packages ****
+		if [ "$SKIP_INSTALL_LIBS" = "false" ]; then
 		
-		REQUIRED_PCK="unixodbc tdsodbc freetds-common odbcinst1debian2 odbcinst libcppdb-sqlite3-0 libodbc1 libiodbc2 libcppdb-odbc0 libltdl7 libcppdb0 ldap-utils"
-		INSTALL_REQUIRED_PCK="false"
-		for PCK in $REQUIRED_PCK; do 
-			if ! dpkg -s $PCK > /dev/null 2>&1 ; then
-				INSTALL_REQUIRED_PCK="true"
-				break
+			# ***** Erlang Runtime Library **********
+
+			# erlang-solutions is a rpm package for Erlang repository
+			if ! dpkg -s erlang-solutions > /dev/null 2>&1 ; then
+				echo "Adding Erlang repository entry."
+				wget -nv https://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb
+
+				# Check internet connectivity
+				if [ "$?" -eq "4" ]; then
+					echo "Make sure your DNS is well configured or if there is Internet on this host. Canceling installation..."
+					exit 1
+				fi
+
+				 dpkg -i erlang-solutions_1.0_all.deb
+				UPDATE_NECESSARY="true"
 			fi
-		done
-		if [ "$INSTALL_REQUIRED_PCK" == "true" ]; then
-			echo "Installing required packages $REQUIRED_PCK..."
-			 apt-get -y install $REQUIRED_PCK
-		else
-			echo "Skipping required packages installation because it is already installed."
+
+
+			# update yum if necessary
+			if [ "$UPDATE_NECESSARY" = "true" ]; then
+				echo "apt update..."
+				 apt-get -y update
+			fi
+
+			# Check if Erlang runtime already exist
+			if ! erl -version 2> /dev/null;  then
+				echo "Installing Erlang Runtime Library packages..."
+				  apt-get install erlang
+			else
+				echo "Skipping Erlang Runtime Library installation because it is already installed."
+			fi
+
+
+			# **** Install required packages ****
+			
+			REQUIRED_PCK="unixodbc tdsodbc freetds-common odbcinst1debian2 odbcinst libcppdb-sqlite3-0 libodbc1 libiodbc2 libcppdb-odbc0 libltdl7 libcppdb0 ldap-utils"
+			INSTALL_REQUIRED_PCK="false"
+			for PCK in $REQUIRED_PCK; do 
+				if ! dpkg -s $PCK > /dev/null 2>&1 ; then
+					INSTALL_REQUIRED_PCK="true"
+					break
+				fi
+			done
+			if [ "$INSTALL_REQUIRED_PCK" == "true" ]; then
+				echo "Installing required packages $REQUIRED_PCK..."
+				 apt-get -y install $REQUIRED_PCK
+			else
+				echo "Skipping required packages installation because it is already installed."
+			fi
 		fi
 
 
@@ -445,7 +455,7 @@ install(){
 			 systemctl stop ems-bus > /dev/null 2>&1
 			VERSION_INSTALLED=$(dpkg -s ems-bus | grep Version | cut -d: -f2)
 			echo "Removing previously installed$VERSION_INSTALLED version."
-			if  apt-get -y remove ems-bus > /dev/null; then
+			if  apt-get -y remove ems-bus > /dev/null 2>&1; then
 				echo "Installing $SETUP_PACKAGE..."
 				if  dpkg -i $SETUP_PACKAGE; then
 					echo "Installation done successfully!!!"
@@ -498,6 +508,29 @@ check_send_email(){
 	fi
 }
 
+
+# *************** main ***************
+
+# Read command line parameters
+for P in $*; do
+	if [[ "$P" =~ ^--.+$ ]]; then
+		if [[ "$P" =~ ^--send_?email$ ]]; then
+			SEND_EMAIL="true"
+		elif [[ "$P" =~ ^--email_to=.+$ ]]; then
+			SMTP_TO="$(echo $P | cut -d= -f2)"
+		elif [ "$P" = "--skip_install_libs" ]; then
+			SKIP_INSTALL_LIBS="true"
+		elif [ "$P" = "--help" ]; then
+			help
+		else
+			echo "Invalid parameter: $P"
+			help
+		fi
+	else
+		echo "Invalid parameter: $P"
+		help
+	fi
+done
 
 install
 check_send_email
