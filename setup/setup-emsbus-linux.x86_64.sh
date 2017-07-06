@@ -57,6 +57,7 @@ LOG_FILE="setup_emsbus_""$SETUP_VERSION""_$(date '+%d%m%Y_%H%M%S').log"
 SKIP_INSTALL_LIBS="false"
 
 # SMTP parameter
+SEND_EMAIL="false"
 SMTP_SERVER="mail.unb.br"
 SMTP_PORT=587
 SMTP_FROM=""
@@ -378,15 +379,12 @@ install(){
 			systemctl stop ems-bus > /dev/null 2>&1
 			VERSION_INSTALLED=$(dpkg -s ems-bus | grep Version | cut -d: -f2)
 			echo "Removing previously installed$VERSION_INSTALLED version."
-			if  apt-get -y remove ems-bus > /dev/null 2>&1; then
-				echo "Installing $SETUP_PACKAGE..."
-				if  dpkg -i $SETUP_PACKAGE; then
-					echo "Installation done successfully!!!"
-				else 
-					echo "Installation was unsuccessful."
-				fi
-			else
-				echo "It was not possible remove previously installed$VERSION_INSTALLED version."
+			apt-get -y remove ems-bus > /dev/null 2>&1
+			echo "Installing $SETUP_PACKAGE..."
+			if  dpkg -i $SETUP_PACKAGE; then
+				echo "Installation done successfully!!!"
+			else 
+				echo "Installation was unsuccessful."
 			fi
 		fi
 
@@ -455,15 +453,12 @@ install(){
 			 systemctl stop ems-bus > /dev/null 2>&1
 			VERSION_INSTALLED=$(dpkg -s ems-bus | grep Version | cut -d: -f2)
 			echo "Removing previously installed$VERSION_INSTALLED version."
-			if  apt-get -y remove ems-bus > /dev/null 2>&1; then
-				echo "Installing $SETUP_PACKAGE..."
-				if  dpkg -i $SETUP_PACKAGE; then
-					echo "Installation done successfully!!!"
-				else 
-					echo "Installation was unsuccessful."
-				fi
-			else
-				echo "It was not possible remove previously installed$VERSION_INSTALLED version."
+			apt-get -y remove ems-bus > /dev/null 2>&1
+			echo "Installing $SETUP_PACKAGE..."
+			if  dpkg -i $SETUP_PACKAGE; then
+				echo "Installation done successfully!!!"
+			else 
+				echo "Installation was unsuccessful."
 			fi
 		fi
 
