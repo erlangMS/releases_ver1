@@ -49,12 +49,15 @@ LINUX_VERSION_ID=$(awk -F"=" '{ if ($1 == "VERSION_ID"){
 # Primary IP of the server
 LINUX_IP_SERVER=$(hostname -I | cut -d" " -f1)
 
-VERSION_SCRIPT="1.0.0"
+VERSION_SCRIPT="2.0.0"
 CURRENT_DIR=$(pwd)
 TMP_DIR="/tmp/erlangms/setup_$SETUP_VERSION_$$/"
 mkdir -p $TMP_DIR && cd $TMP_DIR
-LOG_FILE="setup_emsbus_""$SETUP_VERSION""_$(date '+%d%m%Y_%H%M%S').log"
+LOG_FILE="$CURRENT_DIR/setup_emsbus__$(date '+%d%m%Y_%H%M%S').log"
 SKIP_INSTALL_LIBS="false"
+ONLY_INSTALL_LIBS="false"
+RELEASE_VERSION=""
+REPO_RELEASE_URL="https://github.com/erlangms/releases/raw/master"
 
 # SMTP parameter
 SEND_EMAIL="false"
@@ -68,11 +71,13 @@ SMTP_RE_CHECK="^[a-z0-9!#\$%&'*+/=?^_\`{|}~-]+(\.[a-z0-9!#$%&'*+/=?^_\`{|}~-]+)*
 
 # show help 
 help(){
-	echo "Setup ErlangMS ESB utility  (Version $VERSION_SCRIPT)"
 	echo "How to use: sudo ./setup-emsbus-linux.x86_64"
 	echo
 	echo "Additional parameters:"
-	echo "  --skip_install_libs    -> skip installation of libs"
+	echo "  --skip_install_libs     -> skip installation of libs"
+	echo "  --only_install_libs     -> install only libs"
+	echo "  --release_version       -> set release version to install"
+	echo "  --help                  -> show help"
 	exit 1
 }
 
@@ -115,54 +120,63 @@ install(){
 	exec > >(tee -a ${LOG_FILE} )
 	exec 2> >(tee -a ${LOG_FILE} >&2)
 
-	echo "Preparing for installation of ErlangMS ESB, please wait..."
 	[ "$SKIP_INSTALL_LIBS" = "true" ] && echo "Skip install libs enabled!"
 	
 
 	# Indicates whether it will be necessary to update the repository
 	UPDATE_NECESSARY="false"
 
-	# Github repository ERLANGMS release
-	REPO_RELEASE_URL="https://github.com/erlangms/releases/raw/master"
-					  
-	# Get the last release version of the ems-bus
-	RELEASE_VERSION=$(curl https://raw.githubusercontent.com/erlangms/releases/master/setup/current_version 2> /dev/null)
-	if [ -z "$RELEASE_VERSION" ]; then
-		echo "Could not download the latest version of the ems-bus. Check your connection!!!"
-		exit 1
-	fi
-
-
-	# Define $SETUP_VERSION, SETUP_PACKAGE and $SETUP_FILE
-	if [[ "$LINUX_DISTRO" =~ (centos|debian|ubuntu) ]]; then
-		SETUP_VERSION="ems-bus-$RELEASE_VERSION-$LINUX_DISTRO.$LINUX_VERSION_ID.x86_64"
-		if [ "$LINUX_DISTRO" == "centos" ]; then
-			SETUP_PACKAGE="$SETUP_VERSION.rpm"
-		else
-			SETUP_PACKAGE="$SETUP_VERSION.deb"
+	if [ "$ONLY_INSTALL_LIBS" = "false" ]; then
+						  
+		# Get the last release version of the ems-bus
+		if [ -z "$RELEASE_VERSION" ]; then
+			printf "Verifying the latest version available for installation... "
+			RELEASE_VERSION=$(curl https://raw.githubusercontent.com/erlangms/releases/master/setup/current_version 2> /dev/null)
+			if [ -z "$RELEASE_VERSION" ]; then
+				printf "[ ERROR ]\n"
+				echo "Could not check the latest version available. Check your internet connection!!!"
+				exit 1
+			else
+				printf "[ OK ]\n"
+			fi
 		fi
-		SETUP_FILE="$REPO_RELEASE_URL/$RELEASE_VERSION/$SETUP_PACKAGE"
-	else
-		echo "Setup $SETUP_VERSION is incompatible with this Linux distribution. It is possible to install in the Ubuntu, Debian and Centos distributions."
-		exit 1
-	fi	
+
+		# Define $SETUP_VERSION, SETUP_PACKAGE and $SETUP_FILE
+		if [[ "$LINUX_DISTRO" =~ (centos|debian|ubuntu) ]]; then
+			SETUP_VERSION="ems-bus-$RELEASE_VERSION-$LINUX_DISTRO.$LINUX_VERSION_ID.x86_64"
+			if [ "$LINUX_DISTRO" == "centos" ]; then
+				SETUP_PACKAGE="$SETUP_VERSION.rpm"
+			else
+				SETUP_PACKAGE="$SETUP_VERSION.deb"
+			fi
+			SETUP_FILE="$REPO_RELEASE_URL/$RELEASE_VERSION/$SETUP_PACKAGE"
+		else
+			echo "Setup $SETUP_VERSION is incompatible with this Linux distribution. It is possible to install in the Ubuntu, Debian and Centos distributions."
+			exit 1
+		fi	
 
 
-	# Download the ems-bus package according to the distribution
-	echo "Downloading $SETUP_FILE..."
-	wget -nvc $SETUP_FILE  2> /dev/null
-	if [ ! $? -eq 0 ]; then
-		echo "The ems-bus package $SETUP_PACKAGE could not be downloaded. Canceling the installation."
-		exit 1
+		# Download the ems-bus package according to the distribution
+		echo "Downloading ems-bus package $SETUP_PACKAGE"
+		wget -nvc $SETUP_FILE  2> /dev/null
+		if [ ! $? -eq 0 ]; then
+			echo "The ems-bus package $SETUP_PACKAGE could not be downloaded."
+			exit 1
+		fi
 	fi
 
-
-	echo "Starting the ERLANGMS installation on $LINUX_DESCRIPTION"
-	echo "Purpose: A service-oriented bus developed in Erlang/OTP by Everton de Vargas Agilar"
-	echo "Version: $SETUP_VERSION"
+	if [ "$ONLY_INSTALL_LIBS" = "false" ]; then
+		echo "Starting installation of ems-bus $SETUP_VERSION on $LINUX_DESCRIPTION"
+		echo "Purpose: A service-oriented bus developed in Erlang/OTP by Everton de Vargas Agilar"
+		if [ "$SKIP_INSTALL_LIBS" = "true" ]; then
+			echo "Parameter --skip_install_libs enabled, skip installation of the libraries..."
+		fi
+	else
+		echo "Parameter --only_install_libs enabled, installing only the libraries..."
+	fi
 	echo "Log file: $LOG_FILE" 
-	echo "Host ip: $LINUX_IP_SERVER"
-	echo "Skip install libs: $SKIP_INSTALL_LIBS"
+	echo "Host IP: $LINUX_IP_SERVER"
+	echo "Host name: `hostname`"
 	echo "Date: $(date '+%d/%m/%Y %H:%M:%S')"
 	echo "============================================================================="
 
@@ -294,22 +308,24 @@ install(){
 		
 		# ***** Install or update ems-bus *****
 		
-		if ! rpm -qi ems-bus >> /dev/null ; then
-			echo "Installing $SETUP_PACKAGE..."
-			 rpm -ihv $SETUP_FILE
-		else
-			 systemctl stop ems-bus > /dev/null 2>&1
-			VERSION_INSTALLED=$(rpm -qi ems-bus | grep Version | cut -d: -f2)
-			echo "Removing previously installed$VERSION_INSTALLED version."
-			if  rpm -e ems-bus > /dev/null ; then
+		if [ "$ONLY_INSTALL_LIBS" = "false" ]; then
+			if ! rpm -qi ems-bus >> /dev/null ; then
 				echo "Installing $SETUP_PACKAGE..."
-				if  rpm -ihv $SETUP_PACKAGE; then
-					echo "Installation done successfully!!!"
-				else
-					echo "Installation was unsuccessful."
-				fi
+				 rpm -ihv $SETUP_FILE
 			else
-				echo "It was not possible remove previously installed$VERSION_INSTALLED version."
+				 systemctl stop ems-bus > /dev/null 2>&1
+				VERSION_INSTALLED=$(rpm -qi ems-bus | grep Version | cut -d: -f2)
+				echo "Removing previously installed$VERSION_INSTALLED version."
+				if  rpm -e ems-bus > /dev/null ; then
+					echo "Installing $SETUP_PACKAGE..."
+					if  rpm -ihv $SETUP_PACKAGE; then
+						echo "Installation done successfully!!!"
+					else
+						echo "Installation was unsuccessful."
+					fi
+				else
+					echo "It was not possible remove previously installed$VERSION_INSTALLED version."
+				fi
 			fi
 		fi
 
@@ -354,7 +370,7 @@ install(){
 
 			# **** Install required packages ****
 			
-			REQUIRED_PCK="libiodbc2 unixodbc tdsodbc:amd64 odbcinst1debian2:amd64 odbcinst libsqliteodbc:amd64 libsqliteodbc libodbc1 libsqlite0 freetds-common ldap-utils"
+			REQUIRED_PCK="libiodbc2 unixodbc tdsodbc:amd64 odbcinst1debian2:amd64 odbcinst libsqliteodbc:amd64 libsqliteodbc libodbc1 libsqlite0 freetds-common ldap-utils net-tools"
 			INSTALL_REQUIRED_PCK="false"
 			for PCK in $REQUIRED_PCK; do 
 				if ! dpkg -s $PCK > /dev/null 2>&1 ; then
@@ -372,19 +388,21 @@ install(){
 		
 		# ***** Install or update ems-bus *****
 		
-		if ! dpkg -s ems-bus > /dev/null 2>&1 ; then
-			echo "Installing $SETUP_PACKAGE..."
-			 dpkg -i $SETUP_PACKAGE
-		else
-			systemctl stop ems-bus > /dev/null 2>&1
-			VERSION_INSTALLED=$(dpkg -s ems-bus | grep Version | cut -d: -f2)
-			echo "Removing previously installed$VERSION_INSTALLED version."
-			apt-get -y remove ems-bus > /dev/null 2>&1
-			echo "Installing $SETUP_PACKAGE..."
-			if  dpkg -i $SETUP_PACKAGE; then
-				echo "Installation done successfully!!!"
-			else 
-				echo "Installation was unsuccessful."
+		if [ "$ONLY_INSTALL_LIBS" = "false" ]; then
+			if ! dpkg -s ems-bus > /dev/null 2>&1 ; then
+				echo "Installing $SETUP_PACKAGE..."
+				 dpkg -i $SETUP_PACKAGE
+			else
+				systemctl stop ems-bus > /dev/null 2>&1
+				VERSION_INSTALLED=$(dpkg -s ems-bus | grep Version | cut -d: -f2)
+				echo "Removing previously installed$VERSION_INSTALLED version."
+				apt-get -y remove ems-bus > /dev/null 2>&1
+				echo "Installing $SETUP_PACKAGE..."
+				if  dpkg -i $SETUP_PACKAGE; then
+					echo "Installation done successfully!!!"
+				else 
+					echo "Installation was unsuccessful."
+				fi
 			fi
 		fi
 
@@ -446,19 +464,21 @@ install(){
 
 		# ***** Install or update ems-bus *****
 		
-		if ! dpkg -s ems-bus >> /dev/null ; then
-			echo "Installing $SETUP_PACKAGE..."
-			 dpkg -i $SETUP_PACKAGE
-		else
-			 systemctl stop ems-bus > /dev/null 2>&1
-			VERSION_INSTALLED=$(dpkg -s ems-bus | grep Version | cut -d: -f2)
-			echo "Removing previously installed$VERSION_INSTALLED version."
-			apt-get -y remove ems-bus > /dev/null 2>&1
-			echo "Installing $SETUP_PACKAGE..."
-			if  dpkg -i $SETUP_PACKAGE; then
-				echo "Installation done successfully!!!"
-			else 
-				echo "Installation was unsuccessful."
+		if [ "$ONLY_INSTALL_LIBS" = "false" ]; then
+			if ! dpkg -s ems-bus >> /dev/null ; then
+				echo "Installing $SETUP_PACKAGE..."
+				 dpkg -i $SETUP_PACKAGE
+			else
+				 systemctl stop ems-bus > /dev/null 2>&1
+				VERSION_INSTALLED=$(dpkg -s ems-bus | grep Version | cut -d: -f2)
+				echo "Removing previously installed$VERSION_INSTALLED version."
+				apt-get -y remove ems-bus > /dev/null 2>&1
+				echo "Installing $SETUP_PACKAGE..."
+				if  dpkg -i $SETUP_PACKAGE; then
+					echo "Installation done successfully!!!"
+				else 
+					echo "Installation was unsuccessful."
+				fi
 			fi
 		fi
 
@@ -506,15 +526,22 @@ check_send_email(){
 
 # *************** main ***************
 
+echo "Setup erlangms tool ( Version: $VERSION_SCRIPT   Distro: $LINUX_DISTRO )"
+
+
 # Read command line parameters
 for P in $*; do
 	if [[ "$P" =~ ^--.+$ ]]; then
 		if [[ "$P" =~ ^--send_?email$ ]]; then
 			SEND_EMAIL="true"
-		elif [[ "$P" =~ ^--email_to=.+$ ]]; then
+		elif [[ "$P" =~ ^--email[_-]to=.+$ ]]; then
 			SMTP_TO="$(echo $P | cut -d= -f2)"
-		elif [ "$P" = "--skip_install_libs" ]; then
+		elif [[ "$P" =~ ^--release[_-]version=.+$ ]]; then
+			RELEASE_VERSION="$(echo $P | cut -d= -f2)"
+		elif [ "$P" = --skip_install_libs ]; then
 			SKIP_INSTALL_LIBS="true"
+		elif [ "$P" = --only_install_libs ]; then
+			ONLY_INSTALL_LIBS="true"
 		elif [ "$P" = "--help" ]; then
 			help
 		else
@@ -526,6 +553,10 @@ for P in $*; do
 		help
 	fi
 done
+
+if [ "$ONLY_INSTALL_LIBS" = "true" ]; then
+	SKIP_INSTALL_LIBS="false"	
+fi
 
 install
 check_send_email
