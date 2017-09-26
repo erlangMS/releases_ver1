@@ -14,18 +14,14 @@
 # 15/01/2017  Everton Agilar     Initial release
 # 05/03/2017  Everton Agilar     Make sure only root can run our script
 # 28/07/2017  Everton Agilar     Remove sudo command and add options --send_email, --email_to
-#
+# 26/09/2017  Everton Agilar     New parameters: --from_file, --only_install_libs, --release_version
 #
 #
 #
 #
 ########################################################################################################
 
-# Make sure only root can run our script
-if [[ $EUID -ne 0 ]]; then
-   echo "This setup must be run as root" 1>&2
-   exit 1
-fi
+VERSION_SCRIPT="2.0.0"
 
 # Identify the linux distribution: ubuntu, debian, centos
 LINUX_DISTRO=$(awk -F"=" '{ if ($1 == "ID"){ 
@@ -44,12 +40,35 @@ LINUX_VERSION_ID=$(awk -F"=" '{ if ($1 == "VERSION_ID"){
 									gsub("\"", "", $2);  print $2 
 								 } 
 							   }'  /etc/os-release)
+							   
+							   
+echo "Setup erlangms tool ( Version: $VERSION_SCRIPT  Distro: $LINUX_DISTRO )"
+
+# show help 
+help(){
+	echo "How to use: sudo ./setup-emsbus-linux.x86_64.sh"
+	echo
+	echo "Additional parameters:"
+	echo "  --skip_install_libs     -> Skip installation of required packages"
+	echo "  --only_install_libs     -> Install only the required packages, not the ems-bus"
+	echo "  --release_version       -> Set release version to install. The default is to get the version from git"
+	echo "  --from_file             -> Get the ems-bus file from a fixed location instead of downloading from git"
+	echo "  --help                  -> show help"
+	echo
+	echo "This command must be run as root."
+	exit 1
+}
+
+# Make sure only root can run our script
+if [[ $EUID -ne 0 ]]; then
+   help
+   exit 1
+fi
 
 
 # Primary IP of the server
 LINUX_IP_SERVER=$(hostname -I | cut -d" " -f1)
 
-VERSION_SCRIPT="2.0.0"
 CURRENT_DIR=$(pwd)
 TMP_DIR="/tmp/erlangms/setup_$SETUP_VERSION_$$/"
 mkdir -p $TMP_DIR && cd $TMP_DIR
@@ -68,18 +87,6 @@ SMTP_TO=""
 SMTP_PASSWD=""
 SMTP_RE_CHECK="^[a-z0-9!#\$%&'*+/=?^_\`{|}~-]+(\.[a-z0-9!#$%&'*+/=?^_\`{|}~-]+)*@([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z0-9]([a-z0-9-]*[a-z0-9])?\$"
 
-
-# show help 
-help(){
-	echo "How to use: sudo ./setup-emsbus-linux.x86_64"
-	echo
-	echo "Additional parameters:"
-	echo "  --skip_install_libs     -> skip installation of libs"
-	echo "  --only_install_libs     -> install only libs"
-	echo "  --release_version       -> set release version to install"
-	echo "  --help                  -> show help"
-	exit 1
-}
 
 
 # Function to send email
@@ -128,40 +135,56 @@ install(){
 
 	if [ "$ONLY_INSTALL_LIBS" = "false" ]; then
 						  
-		# Get the last release version of the ems-bus
-		if [ -z "$RELEASE_VERSION" ]; then
-			printf "Verifying the latest version available for installation... "
-			RELEASE_VERSION=$(curl https://raw.githubusercontent.com/erlangms/releases/master/setup/current_version 2> /dev/null)
-			if [ -z "$RELEASE_VERSION" ]; then
-				printf "[ ERROR ]\n"
-				echo "Could not check the latest version available. Check your internet connection!!!"
+		if [ -n "$FROM_FILE" ]; then
+			SETUP_PACKAGE=$(basename $FROM_FILE)
+			LINUX_DISTRO2=$(echo $SETUP_PACKAGE | sed -r 's/ems-bus-([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3})-([[:alpha:]]+).+/\2/')
+			if [ "$LINUX_DISTRO" != "$LINUX_DISTRO" ]; then
+				echo "Setup $SETUP_VERSION is incompatible with this Linux distribution. It is possible to install in the Ubuntu, Debian and Centos distributions."
 				exit 1
-			else
-				printf "[ OK ]\n"
 			fi
+			SETUP_FILE=$FROM_FILE
+			RELEASE_VERSION=$(echo $SETUP_PACKAGE | sed -r 's/ems-bus-([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}).+/\1/')
+			SETUP_VERSION=$(echo $SETUP_PACKAGE | sed -r 's/.(deb|rpm)$//')
+			cp $FROM_FILE .
 		fi
-
-		# Define $SETUP_VERSION, SETUP_PACKAGE and $SETUP_FILE
-		if [[ "$LINUX_DISTRO" =~ (centos|debian|ubuntu) ]]; then
-			SETUP_VERSION="ems-bus-$RELEASE_VERSION-$LINUX_DISTRO.$LINUX_VERSION_ID.x86_64"
-			if [ "$LINUX_DISTRO" == "centos" ]; then
-				SETUP_PACKAGE="$SETUP_VERSION.rpm"
-			else
-				SETUP_PACKAGE="$SETUP_VERSION.deb"
+			
+		if [ -z "$FROM_FILE" ]; then
+			# Get the last release version of the ems-bus
+			if [ -z "$RELEASE_VERSION" ]; then
+				printf "Verifying the latest version available for installation... "
+				RELEASE_VERSION=$(curl https://raw.githubusercontent.com/erlangms/releases/master/setup/current_version 2> /dev/null)
+				if [ -z "$RELEASE_VERSION" ]; then
+					printf "[ ERROR ]\n"
+					echo "Could not check the latest version available. Check your internet connection!!!"
+					exit 1
+				else
+					printf "[ $RELEASE_VERSION ]\n"
+				fi
 			fi
-			SETUP_FILE="$REPO_RELEASE_URL/$RELEASE_VERSION/$SETUP_PACKAGE"
-		else
-			echo "Setup $SETUP_VERSION is incompatible with this Linux distribution. It is possible to install in the Ubuntu, Debian and Centos distributions."
-			exit 1
-		fi	
 
 
-		# Download the ems-bus package according to the distribution
-		echo "Downloading ems-bus package $SETUP_PACKAGE"
-		wget -nvc $SETUP_FILE  2> /dev/null
-		if [ ! $? -eq 0 ]; then
-			echo "The ems-bus package $SETUP_PACKAGE could not be downloaded."
-			exit 1
+			# Define $SETUP_VERSION, SETUP_PACKAGE and $SETUP_FILE
+			if [[ "$LINUX_DISTRO" =~ (centos|debian|ubuntu) ]]; then
+				SETUP_VERSION="ems-bus-$RELEASE_VERSION-$LINUX_DISTRO.$LINUX_VERSION_ID.x86_64"
+				if [ "$LINUX_DISTRO" == "centos" ]; then
+					SETUP_PACKAGE="$SETUP_VERSION.rpm"
+				else
+					SETUP_PACKAGE="$SETUP_VERSION.deb"
+				fi
+				SETUP_FILE="$REPO_RELEASE_URL/$RELEASE_VERSION/$SETUP_PACKAGE"
+			else
+				echo "Setup $SETUP_VERSION is incompatible with this Linux distribution. It is possible to install in the Ubuntu, Debian and Centos distributions."
+				exit 1
+			fi	
+
+
+			# Download the ems-bus package according to the distribution
+			echo "Downloading package $SETUP_PACKAGE..."
+			wget -nvc $SETUP_FILE  2> /dev/null
+			if [ ! $? -eq 0 ]; then
+				echo "The ems-bus package $SETUP_PACKAGE could not be downloaded."
+				exit 1
+			fi
 		fi
 	fi
 
@@ -311,9 +334,13 @@ install(){
 		if [ "$ONLY_INSTALL_LIBS" = "false" ]; then
 			if ! rpm -qi ems-bus >> /dev/null ; then
 				echo "Installing $SETUP_PACKAGE..."
-				 rpm -ihv $SETUP_FILE
+				if rpm -ihv $SETUP_FILE; then
+					echo "Installation done successfully!!!"
+				else
+					echo "Installation was unsuccessful."
+				fi
 			else
-				 systemctl stop ems-bus > /dev/null 2>&1
+				systemctl stop ems-bus > /dev/null 2>&1
 				VERSION_INSTALLED=$(rpm -qi ems-bus | grep Version | cut -d: -f2)
 				echo "Removing previously installed$VERSION_INSTALLED version."
 				if  rpm -e ems-bus > /dev/null ; then
@@ -391,7 +418,11 @@ install(){
 		if [ "$ONLY_INSTALL_LIBS" = "false" ]; then
 			if ! dpkg -s ems-bus > /dev/null 2>&1 ; then
 				echo "Installing $SETUP_PACKAGE..."
-				 dpkg -i $SETUP_PACKAGE
+				if dpkg -i $SETUP_PACKAGE; then
+					echo "Installation done successfully!!!"
+				else
+					echo "Installation was unsuccessful."
+				fi
 			else
 				systemctl stop ems-bus > /dev/null 2>&1
 				VERSION_INSTALLED=$(dpkg -s ems-bus | grep Version | cut -d: -f2)
@@ -467,7 +498,11 @@ install(){
 		if [ "$ONLY_INSTALL_LIBS" = "false" ]; then
 			if ! dpkg -s ems-bus >> /dev/null ; then
 				echo "Installing $SETUP_PACKAGE..."
-				 dpkg -i $SETUP_PACKAGE
+				if dpkg -i $SETUP_PACKAGE; then
+					echo "Installation done successfully!!!"
+				else
+					echo "Installation was unsuccessful."
+				fi
 			else
 				 systemctl stop ems-bus > /dev/null 2>&1
 				VERSION_INSTALLED=$(dpkg -s ems-bus | grep Version | cut -d: -f2)
@@ -526,9 +561,6 @@ check_send_email(){
 
 # *************** main ***************
 
-echo "Setup erlangms tool ( Version: $VERSION_SCRIPT   Distro: $LINUX_DISTRO )"
-
-
 # Read command line parameters
 for P in $*; do
 	if [[ "$P" =~ ^--.+$ ]]; then
@@ -542,6 +574,8 @@ for P in $*; do
 			SKIP_INSTALL_LIBS="true"
 		elif [ "$P" = --only_install_libs ]; then
 			ONLY_INSTALL_LIBS="true"
+		elif [[ "$P" =~ ^--from_file=.+$ ]]; then
+			FROM_FILE="$(echo $P | cut -d= -f2)"
 		elif [ "$P" = "--help" ]; then
 			help
 		else
@@ -553,6 +587,10 @@ for P in $*; do
 		help
 	fi
 done
+
+if [ -n "$RELEASE_VERSION" -a -n "$FROM_FILE" ]; then
+	echo "Parameters --release_version and --from_file can not be entered together."
+fi
 
 if [ "$ONLY_INSTALL_LIBS" = "true" ]; then
 	SKIP_INSTALL_LIBS="false"	
