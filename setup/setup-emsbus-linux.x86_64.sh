@@ -136,7 +136,7 @@ install(){
 		fi
 	fi
 
-	echo "Starting installation of $SETUP_VERSION on $LINUX_DESCRIPTION"
+	echo "Starting installation of $SETUP_VERSION on Linux $LINUX_DESCRIPTION"
 	echo "Purpose: A service-oriented bus developed in Erlang/OTP by Everton de Vargas Agilar"
 	echo "Log file: $LOG_FILE" 
 	echo "Host IP: $LINUX_IP_SERVER"
@@ -372,9 +372,7 @@ install(){
 # Read command line parameters
 for P in $*; do
 	if [[ "$P" =~ ^--.+$ ]]; then
-		elif [[ "$P" =~ ^--email[_-]to=.+$ ]]; then
-			SMTP_TO="$(echo $P | cut -d= -f2)"
-		elif [[ "$P" =~ ^--release[_-]version=.+$ ]]; then
+		if [[ "$P" =~ ^--release[_-]version=.+$ ]]; then
 			RELEASE_VERSION="$(echo $P | cut -d= -f2)"
 		elif [ "$P" = --install_erlang_runtime ]; then
 			INSTALL_ERLANG_RUNTIME="true"
@@ -397,7 +395,6 @@ if [ -n "$RELEASE_VERSION" -a -n "$FROM_FILE" ]; then
 fi
 
 install
-check_send_email
 cd $CURRENT_DIR
 rm -rf $TMP_DIR
 
