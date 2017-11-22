@@ -16,6 +16,7 @@
 # 28/07/2017  Everton Agilar     Remove sudo command and add options --send_email, --email_to
 # 26/09/2017  Everton Agilar     New parameters: --from_file, --only_install_libs, --release_version
 # 22/10/2017  Everton Agilar     By default, does not install erlang runtime system
+# 22/11/2017  Everton Agilar     Install curl and wget if necessary
 #
 #
 #
@@ -83,6 +84,28 @@ install(){
 
 	# Indicates whether it will be necessary to update the repository
 	UPDATE_NECESSARY="false"
+
+	# Install pre-requisites: curl
+	if ! curl --version >> /dev/null 2>&1; then
+		if [ "$LINUX_DISTRO" = "centos" ]; then
+			yum -y install curl
+		elif [ "$LINUX_DISTRO" = "ubuntu" ]; then
+			apt-get -y install curl
+		elif [ "$LINUX_DISTRO" = "debian" ]; then
+			apt-get -y install curl
+		fi	
+	fi
+
+	# Install pre-requisites: wget
+	if ! wget --version >> /dev/null 2>&1; then
+		if [ "$LINUX_DISTRO" = "centos" ]; then
+			yum -y install wget
+		elif [ "$LINUX_DISTRO" = "ubuntu" ]; then
+			apt-get -y install wget
+		elif [ "$LINUX_DISTRO" = "debian" ]; then
+			apt-get -y install wget
+		fi	
+	fi
 				  
 	if [ -n "$FROM_FILE" ]; then
 		SETUP_PACKAGE=$(basename $FROM_FILE)
