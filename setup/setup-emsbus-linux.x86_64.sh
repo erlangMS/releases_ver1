@@ -91,6 +91,8 @@ install(){
 			yum -y install curl
 		elif [ "$LINUX_DISTRO" = "ubuntu" ]; then
 			apt-get -y install curl
+		elif [ "$LINUX_DISTRO" = "deepin" ]; then
+			apt-get -y install curl
 		elif [ "$LINUX_DISTRO" = "debian" ]; then
 			apt-get -y install curl
 		fi	
@@ -101,6 +103,8 @@ install(){
 		if [ "$LINUX_DISTRO" = "centos" ]; then
 			yum -y install wget
 		elif [ "$LINUX_DISTRO" = "ubuntu" ]; then
+			apt-get -y install wget
+		elif [ "$LINUX_DISTRO" = "deepin" ]; then
 			apt-get -y install wget
 		elif [ "$LINUX_DISTRO" = "debian" ]; then
 			apt-get -y install wget
@@ -136,7 +140,7 @@ install(){
 
 
 		# Define $SETUP_VERSION, SETUP_PACKAGE and $SETUP_FILE
-		if [[ "$LINUX_DISTRO" =~ (centos|debian|ubuntu) ]]; then
+		if [[ "$LINUX_DISTRO" =~ (centos|debian|ubuntu|deepin) ]]; then
 			SETUP_VERSION="ems-bus-$RELEASE_VERSION-$LINUX_DISTRO.$LINUX_VERSION_ID.x86_64"
 			if [ "$LINUX_DISTRO" == "centos" ]; then
 				SETUP_PACKAGE="$SETUP_VERSION.rpm"
@@ -326,6 +330,66 @@ install(){
 				echo "Installation was unsuccessful."
 			fi
 		fi
+
+	elif [ "$LINUX_DISTRO" = "deepin" ]; then
+		
+		if [ "$INSTALL_ERLANG_RUNTIME" = "true" ]; then
+		
+			# erlang-solutions is a rpm package for Erlang repository
+			if ! dpkg -s erlang-solutions > /dev/null 2>&1; then
+				echo "Adding Erlang repository entry."
+				wget -nv https://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb
+
+				# Check internet connectivity
+				if [ "$?" -eq "4" ]; then
+					echo "Make sure your DNS is well configured or if there is Internet on this host. Canceling installation..."
+					exit 1
+				fi
+
+				 dpkg -i erlang-solutions_1.0_all.deb
+				UPDATE_NECESSARY="true"
+			fi
+
+
+			# update yum if necessary
+			if [ "$UPDATE_NECESSARY" = "true" ]; then
+				echo "apt update..."
+				 apt-get -y update
+			fi
+
+
+			# Check if Erlang runtime already exist
+			if ! erl -version 2> /dev/null;  then
+				echo "Installing Erlang Runtime Library packages..."
+				  apt-get install erlang
+			else
+				echo "Skipping Erlang Runtime Library installation because it is already installed."
+			fi
+
+		fi
+		
+		# ***** Install or update ems-bus *****
+		
+		if ! dpkg -s ems-bus > /dev/null 2>&1 ; then
+			echo "Installing $SETUP_PACKAGE..."
+			if dpkg -i $SETUP_PACKAGE; then
+				echo "Installation done successfully!!!"
+			else
+				echo "Installation was unsuccessful."
+			fi
+		else
+			systemctl stop ems-bus > /dev/null 2>&1
+			VERSION_INSTALLED=$(dpkg -s ems-bus | grep Version | cut -d: -f2)
+			echo "Removing previously installed$VERSION_INSTALLED version."
+			apt-get -y remove ems-bus > /dev/null 2>&1
+			echo "Installing $SETUP_PACKAGE..."
+			if  dpkg -i $SETUP_PACKAGE; then
+				echo "Installation done successfully!!!"
+			else 
+				echo "Installation was unsuccessful."
+			fi
+		fi
+
 
 	elif [ "$LINUX_DISTRO" = "debian" ]; then
 
