@@ -50,7 +50,7 @@ help(){
 	echo "How to use: sudo ./setup-emsbus-linux.x86_64.sh"
 	echo
 	echo "Additional parameters:"
-	echo "  --install_erlang_rumtime -> Install Erlang Runtime"
+	echo "  --install_erlang_runtime -> Install Erlang Runtime"
 	echo "  --release_version        -> Set release version to install. The default is to get the version from git"
 	echo "  --from_file              -> Get the ems-bus file from a fixed location instead of downloading from git"
 	echo "  --help                   -> Show help"
