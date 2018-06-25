@@ -73,7 +73,7 @@ mkdir -p $TMP_DIR && cd $TMP_DIR
 LOG_FILE="$CURRENT_DIR/setup_emsbus__$(date '+%d%m%Y_%H%M%S').log"
 INSTALL_ERLANG_RUNTIME="false"
 RELEASE_VERSION=""
-REPO_RELEASE_URL="https://github.com/erlangms/releases/raw/master"
+REPO_RELEASE_URL="http://github.com/erlangms/releases/raw/master"
 
 
 # Performs the installation of the ems-bus
@@ -128,7 +128,7 @@ install(){
 		# Get the last release version of the ems-bus
 		if [ -z "$RELEASE_VERSION" ]; then
 			printf "Verifying the latest version available for installation... "
-			RELEASE_VERSION=$(curl https://raw.githubusercontent.com/erlangms/releases/master/setup/current_version 2> /dev/null)
+			RELEASE_VERSION=$(curl http://raw.githubusercontent.com/erlangms/releases/master/setup/current_version 2> /dev/null)
 			if [ -z "$RELEASE_VERSION" ]; then
 				printf "[ ERROR ]\n"
 				echo "Could not check the latest version available. Check your internet connection!!!"
